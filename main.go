@@ -13,13 +13,6 @@ type GachaResult struct {
 	Character string `json:"character"`
 }
 
-// トップページ（ / ）にアクセスされた時の処理
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	// Fprintf を使うと、ブラウザの画面（w）に直接文字を出力できます
-	fmt.Fprintf(w, "<h1>ガチャAPI稼働中！</h1>")
-	fmt.Fprintf(w, "<p>ガチャを引くにはURLの末尾に <b>/gacha</b> を付けてください。</p>")
-}
-
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// 0〜99の乱数を生成
@@ -44,12 +37,14 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// 「/」というURLにアクセスが来たら、rootHandlerを実行するように設定
-	http.HandleFunc("/", rootHandler)
+	// "static"フォルダの中身（HTML, CSS, JS）を、そのままブラウザに公開する設定
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/", fs)
+
 	// 「/gacha」というURLにアクセスが来たら、gachaHandlerを実行するように設定
 	http.HandleFunc("/gacha", gachaHandler)
 
-	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080/gacha にアクセスしてください。")
+	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080 にアクセスしてください。")
 	fmt.Println("終了するにはターミナルで Ctrl + C を押します。")
 
 	// ポート8080でサーバーを起動（ゲームのメインループのように、ここでアクセスを待ち続けます）

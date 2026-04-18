@@ -1,0 +1,25 @@
+body { 
+    text-align: center; 
+    font-family: sans-serif; 
+    margin-top: 50px; 
+}
+#gacha-btn { 
+    font-size: 20px; 
+    padding: 15px 30px; 
+    cursor: pointer; 
+    background-color: #ff9800; 
+    color: white; 
+    border: none; 
+    border-radius: 5px; 
+}
+#gacha-btn:hover { 
+    background-color: #e68a00; 
+}
+#result-area { 
+    margin-top: 30px; 
+    font-size: 24px; 
+    font-weight: bold; 
+}
+.star5 { color: #d32f2f; }
+.star4 { color: #7b1fa2; }
+.star3 { color: #1976d2; }
