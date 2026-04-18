@@ -13,6 +13,13 @@ type GachaResult struct {
 	Character string `json:"character"`
 }
 
+// トップページ（ / ）にアクセスされた時の処理
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	// Fprintf を使うと、ブラウザの画面（w）に直接文字を出力できます
+	fmt.Fprintf(w, "<h1>ガチャAPI稼働中！</h1>")
+	fmt.Fprintf(w, "<p>ガチャを引くにはURLの末尾に <b>/gacha</b> を付けてください。</p>")
+}
+
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// 0〜99の乱数を生成
@@ -37,6 +44,8 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// 「/」というURLにアクセスが来たら、rootHandlerを実行するように設定
+	http.HandleFunc("/", rootHandler)
 	// 「/gacha」というURLにアクセスが来たら、gachaHandlerを実行するように設定
 	http.HandleFunc("/gacha", gachaHandler)
 
