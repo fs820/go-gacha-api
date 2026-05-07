@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// チャの結果を入れる構造体 変数名の先頭が大文字にすると外部からアクセスできる（JSONに変換するために必要）
+// ガチャの結果を入れる構造体 変数名の先頭が大文字にすると外部からアクセスできる（JSONに変換するために必要）
 type GachaResult struct {
 	Rarity    string `json:"rarity"`    // レアリティ (`json:"rarity"`は、JSONに変換するときのキー名)
 	Character string `json:"character"` // キャラクター名 (`json:"character"`は、JSONに変換するときのキー名)
@@ -58,18 +58,18 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 
 // ガチャの結果を判定する関数
 func gachaJudgment() GachaResult {
-	// 0〜99の乱数を生成
-	roll := rand.Intn(100)
+	// 0〜999の乱数を生成
+	roll := rand.Intn(1000)
 
 	// 確率の判定
-	if roll < 5 {
-		// 5%の確率で星5
+	if roll < 6 {
+		// 0.6%の確率で星5
 		return GachaResult{Rarity: "星5", Character: "ゼーレ"}
-	} else if roll < 20 {
-		// 15%の確率で星4
+	} else if roll < 57 {
+		// 5.1%の確率で星4
 		return GachaResult{Rarity: "星4", Character: "丹恒"}
 	} else {
-		// 80%の確率で星3
+		// 94.3%の確率で星3
 		return GachaResult{Rarity: "星3", Character: "光円錐"}
 	}
 }
