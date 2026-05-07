@@ -14,6 +14,10 @@ type GachaResult struct {
 	Character string `json:"character"` // キャラクター名 (`json:"character"`は、JSONに変換するときのキー名)
 }
 
+// 天井のカウンター
+var star4LimitCounter int // 星4以上が出るまでのカウンター
+var star5LimitCounter int // 星5が出るまでのカウンター
+
 // メイン関数
 func main() {
 	// "static"フォルダの中身（HTML, CSS, JS）を、そのままブラウザに公開する設定
@@ -62,14 +66,20 @@ func gachaJudgment() GachaResult {
 	roll := rand.Intn(1000)
 
 	// 確率の判定
-	if roll < 6 {
-		// 0.6%の確率で星5
+	if roll < 6 || star5LimitCounter >= 89 {
+		// 0.6%の確率で星5 （もしくは、89回連続で星5が出ていない場合は強制的に星5）
+		star4LimitCounter = 0 // カウンターをリセット
+		star5LimitCounter = 0 // カウンターをリセット
 		return GachaResult{Rarity: "星5", Character: "ゼーレ"}
-	} else if roll < 57 {
-		// 5.1%の確率で星4
+	} else if roll < 57 || star4LimitCounter >= 9 {
+		// 5.1%の確率で星4 （もしくは、9回連続で星4以上が出ていない場合は強制的に星4）
+		star4LimitCounter = 0 // カウンターをリセット
+		star5LimitCounter++   // カウンターをインクリメント
 		return GachaResult{Rarity: "星4", Character: "丹恒"}
 	} else {
 		// 94.3%の確率で星3
+		star4LimitCounter++ // カウンターをインクリメント
+		star5LimitCounter++ // カウンターをインクリメント
 		return GachaResult{Rarity: "星3", Character: "光円錐"}
 	}
 }
