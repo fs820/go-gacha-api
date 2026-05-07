@@ -34,22 +34,8 @@ func main() {
 
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
-	var result GachaResult
-
-	// 0〜99の乱数を生成
-	roll := rand.Intn(100)
-
-	// 確率の判定（C/C++のif文と全く同じです）
-	if roll < 5 {
-		// 5%の確率で星5
-		result = GachaResult{Rarity: "星5", Character: "ゼーレ"}
-	} else if roll < 20 {
-		// 15%の確率で星4
-		result = GachaResult{Rarity: "星4", Character: "丹恒"}
-	} else {
-		// 残り80%の確率で星3
-		result = GachaResult{Rarity: "星3", Character: "光円錐"}
-	}
+	// ガチャの結果を判定する関数を呼び出して、結果を取得
+	result := gachaJudgment()
 
 	// 結果をJSONに変換して、リクエスト元に返す
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -61,28 +47,29 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 	var results []GachaResult
 
 	for i := 0; i < 10; i++ {
-		var result GachaResult
-
-		// 0〜99の乱数を生成
-		roll := rand.Intn(100)
-
-		// 確率の判定
-		if roll < 5 {
-			// 5%の確率で星5
-			result = GachaResult{Rarity: "星5", Character: "ゼーレ"}
-		} else if roll < 20 {
-			// 15%の確率で星4
-			result = GachaResult{Rarity: "星4", Character: "丹恒"}
-		} else {
-			// 80%の確率で星3
-			result = GachaResult{Rarity: "星3", Character: "光円錐"}
-		}
-
-		// 結果を配列に追加
-		results = append(results, result)
+		// ガチャの結果を判定する関数を呼び出して、結果を取得して、resultsの配列に追加
+		results = append(results, gachaJudgment())
 	}
 
 	// 結果をJSONに変換して、リクエスト元に返す
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(results)
+}
+
+// ガチャの結果を判定する関数
+func gachaJudgment() GachaResult {
+	// 0〜99の乱数を生成
+	roll := rand.Intn(100)
+
+	// 確率の判定
+	if roll < 5 {
+		// 5%の確率で星5
+		return GachaResult{Rarity: "星5", Character: "ゼーレ"}
+	} else if roll < 20 {
+		// 15%の確率で星4
+		return GachaResult{Rarity: "星4", Character: "丹恒"}
+	} else {
+		// 80%の確率で星3
+		return GachaResult{Rarity: "星3", Character: "光円錐"}
+	}
 }
