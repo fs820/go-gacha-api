@@ -8,6 +8,26 @@ import (
 	"net/http"
 )
 
+// 定数の定義
+const (
+	// ガチャの確率を定数として定義
+	probBaseStar5 = 6  // 星5の当たる基本確率（6/1000 = 0.6%）
+	probBaseStar4 = 51 // 星4の当たる基本確率（51/1000 = 5.1%）
+
+	// キャラクターの名前を定数として定義
+	star5Character = "ゼーレ" // 星5のキャラクター
+	star4Character = "丹恒"  // 星4のキャラクター
+	star3Character = "光円錐" // 星3のキャラクター
+
+	// 天井の回数を定数として定義
+	star4Limit = 9  // 星4以上が出るまでの天井回数
+	star5Limit = 89 // 星5が出るまでの天井回数
+
+	// ソフトピティの設定
+	pitySoftStart     = 73 // 確率が上がり始める回数 (74連目)
+	softPityIncrement = 6  // 確率が上がる割合 (6%ずつ増加)
+)
+
 // ガチャの結果を入れる構造体 変数名の先頭が大文字にすると外部からアクセスできる（JSONに変換するために必要）
 type GachaResult struct {
 	Rarity    string `json:"rarity"`    // レアリティ (`json:"rarity"`は、JSONに変換するときのキー名)
@@ -65,13 +85,22 @@ func gachaJudgment() GachaResult {
 	// 0〜999の乱数を生成
 	roll := rand.Intn(1000)
 
+	// 星5の当たる確率（6/1000 = 0.6%）
+	star5Prob := probBaseStar5
+
+	// ソフトピティの確率上昇の判定
+	if star5LimitCounter >= pitySoftStart {
+		// 74連目以降は、6%ずつ確率が上昇
+		star5Prob += softPityIncrement * (star5LimitCounter - (pitySoftStart - 1))
+	}
+
 	// 確率の判定
-	if roll < 6 || star5LimitCounter >= 89 {
+	if roll < star5Prob || star5LimitCounter >= star5Limit {
 		// 0.6%の確率で星5 （もしくは、89回連続で星5が出ていない場合は強制的に星5）
 		star4LimitCounter = 0 // カウンターをリセット
 		star5LimitCounter = 0 // カウンターをリセット
 		return GachaResult{Rarity: "星5", Character: "ゼーレ"}
-	} else if roll < 57 || star4LimitCounter >= 9 {
+	} else if roll < (star5Prob+probBaseStar4) || star4LimitCounter >= star4Limit {
 		// 5.1%の確率で星4 （もしくは、9回連続で星4以上が出ていない場合は強制的に星4）
 		star4LimitCounter = 0 // カウンターをリセット
 		star5LimitCounter++   // カウンターをインクリメント
