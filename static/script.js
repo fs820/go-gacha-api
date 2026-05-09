@@ -6,7 +6,7 @@ async function drawGacha() {
 
     try {
         // サーバーの /gacha エンドポイントにリクエストを送る
-        const response = await fetch("/gacha?uid=koyuki");
+        const response = await fetch("/gacha");
         const data = await response.json();
 
         // 結果を表示する
@@ -30,7 +30,7 @@ async function drawGacha10() {
 
     try {
         // サーバーの /gacha10 エンドポイントにリクエストを送る
-        const response = await fetch("/gacha10?uid=koyuki");
+        const response = await fetch("/gacha10");
         const data = await response.json();
 
         resultArea.innerHTML = "";
