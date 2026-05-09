@@ -67,4 +67,8 @@ function updateHistoryUI(character, rarity) {
     // 新しい履歴を一番上に追加
     const item = `<div class="history-item ${colorClass}">【${rarity}】 ${character}</div>`;
     historyArea.innerHTML = item + historyArea.innerHTML;
+    // 履歴が50件を超えたら、古いものを削除
+    if (historyArea.children.length > 50) {
+        historyArea.removeChild(historyArea.lastChild);
+    }
 }
