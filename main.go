@@ -104,8 +104,12 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// ガチャの結果を判定する関数を呼び出して、結果を取得
 	result := gachaJudgment(user)
 
-	// 履歴に追加
+	// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 	user.GachaHistory = append(user.GachaHistory, result)
+	if len(user.GachaHistory) > 50 {
+		// インデックス1から最後までを残す
+		user.GachaHistory = user.GachaHistory[1:]
+	}
 
 	// レスポンス作成
 	sendGachaResponse(w, []GachaResult{result}, user)
@@ -126,8 +130,12 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 		result := gachaJudgment(user)
 		results = append(results, result)
 
-		// 履歴に追加
+		// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 		user.GachaHistory = append(user.GachaHistory, result)
+		if len(user.GachaHistory) > 50 {
+			// インデックス1から最後までを残す
+			user.GachaHistory = user.GachaHistory[1:]
+		}
 	}
 
 	// レスポンス作成
