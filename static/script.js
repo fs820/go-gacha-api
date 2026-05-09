@@ -5,12 +5,13 @@ async function drawGacha() {
     resultArea.innerHTML = "通信中...";
 
     try {
+        // サーバーの /gacha エンドポイントにリクエストを送る
         const response = await fetch("/gacha");
-        const data = await response.json(); // ここが GachaResponse 構造体になる
+        const data = await response.json();
 
+        // 結果を表示する
         const res = data.results[0];
         let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
-        
         resultArea.innerHTML = `<span class="${colorClass}">【${res.rarity}】 ${res.character}</span>`;
         
         // UI更新
@@ -28,31 +29,18 @@ async function drawGacha10() {
     resultArea.innerHTML = "通信中...";
 
     try {
-const response = await fetch("/gacha");
-        const data = await response.json(); // ここが GachaResponse 構造体になる
-
-        const res = data.results[0];
-        let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
-        
-        resultArea.innerHTML = `<span class="${colorClass}">【${res.rarity}】 ${res.character}</span>`;
-        
-        // UI更新
-        updatePityUI(data.pity5Star, data.pity4Star);
-        updateHistoryUI(res.character, res.rarity);
-    } catch (e) { /* エラー処理 */ }
-}
-
-async function drawGacha10() {
-    const resultArea = document.getElementById("result-area");
-    try {
+        // サーバーの /gacha10 エンドポイントにリクエストを送る
         const response = await fetch("/gacha10");
         const data = await response.json();
 
         resultArea.innerHTML = "";
         // 10個の結果をループ
         data.results.forEach(res => {
+            // レアリティに応じて色を変える
             let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
             resultArea.innerHTML += `<div class="${colorClass}">【${res.rarity}】 ${res.character}</div>`;
+
+            // 履歴UIも更新
             updateHistoryUI(res.character, res.rarity);
         });
 
