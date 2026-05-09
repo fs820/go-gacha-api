@@ -5,18 +5,17 @@ async function drawGacha() {
     resultArea.innerHTML = "通信中...";
 
     try {
-        // バックエンドの単発用APIを叩く
         const response = await fetch("/gacha");
-        // 返ってきたJSONをJavaScriptのオブジェクトに変換
-        const data = await response.json();
+        const data = await response.json(); // ここが GachaResponse 構造体になる
 
-        // レアリティに応じて、文字の色を変えるためのクラス名を決める
-        let colorClass = "star3";
-        if (data.rarity === "星5") colorClass = "star5";
-        if (data.rarity === "星4") colorClass = "star4";
-
-        // 結果表示エリアに、レアリティとキャラクター名を表示するHTMLを作る
-        resultArea.innerHTML = `<span class="${colorClass}">【${data.rarity}】 ${data.character} が出ました！</span>`;
+        const res = data.results[0];
+        let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
+        
+        resultArea.innerHTML = `<span class="${colorClass}">【${res.rarity}】 ${res.character}</span>`;
+        
+        // UI更新
+        updatePityUI(data.pity5Star, data.pity4Star);
+        updateHistoryUI(res.character, res.rarity);
     } catch (error) {
         resultArea.innerHTML = "エラーが発生しました";
     }
@@ -29,25 +28,55 @@ async function drawGacha10() {
     resultArea.innerHTML = "通信中...";
 
     try {
-        // バックエンドの10連用APIを叩く
+const response = await fetch("/gacha");
+        const data = await response.json(); // ここが GachaResponse 構造体になる
+
+        const res = data.results[0];
+        let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
+        
+        resultArea.innerHTML = `<span class="${colorClass}">【${res.rarity}】 ${res.character}</span>`;
+        
+        // UI更新
+        updatePityUI(data.pity5Star, data.pity4Star);
+        updateHistoryUI(res.character, res.rarity);
+    } catch (e) { /* エラー処理 */ }
+}
+
+async function drawGacha10() {
+    const resultArea = document.getElementById("result-area");
+    try {
         const response = await fetch("/gacha10");
-        // 今回の dataList は、10個のデータが入った「配列」になる
-        const dataList = await response.json();
+        const data = await response.json();
 
-        // 画面の「通信中...」を一旦リセットして空にする
         resultArea.innerHTML = "";
-
-        // 配列の中身を1つずつ取り出してループ処理
-        dataList.forEach(data => {
-            let colorClass = "star3";
-            if (data.rarity === "星5") colorClass = "star5";
-            if (data.rarity === "星4") colorClass = "star4";
-
-            // <div>タグで改行しながら、レアリティとキャラクター名を表示するHTMLを作る
-            resultArea.innerHTML += `<div class="${colorClass}">【${data.rarity}】 ${data.character}</div>`;
+        // 10個の結果をループ
+        data.results.forEach(res => {
+            let colorClass = res.rarity === "星5" ? "star5" : (res.rarity === "星4" ? "star4" : "star3");
+            resultArea.innerHTML += `<div class="${colorClass}">【${res.rarity}】 ${res.character}</div>`;
+            updateHistoryUI(res.character, res.rarity);
         });
 
+        // UI更新
+        updatePityUI(data.pity5Star, data.pity4Star);
     } catch (error) {
         resultArea.innerHTML = "エラーが発生しました";
     }
+}
+
+// 天井表示を更新する共通関数
+function updatePityUI(pity5, pity4) {
+    document.getElementById("pity5-count").innerText = pity5;
+    document.getElementById("pity4-count").innerText = pity4;
+}
+
+// 履歴表示を更新する共通関数
+function updateHistoryUI(character, rarity) {
+    const historyArea = document.getElementById("history-area");
+    let colorClass = "star3";
+    if (rarity === "星5") colorClass = "star5";
+    if (rarity === "星4") colorClass = "star4";
+
+    // 新しい履歴を一番上に追加
+    const item = `<div class="history-item ${colorClass}">【${rarity}】 ${character}</div>`;
+    historyArea.innerHTML = item + historyArea.innerHTML;
 }

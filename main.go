@@ -44,10 +44,20 @@ type GachaResult struct {
 	Character string `json:"character"` // キャラクター名 (`json:"character"`は、JSONに変換するときのキー名)
 }
 
+// ブラウザへ返すレスポンス
+type GachaResponse struct {
+	Results   []GachaResult `json:"results"`   // 今回の結果リスト
+	Pity5Star int           `json:"pity5Star"` // 星5天井まであと何回か
+	Pity4Star int           `json:"pity4Star"` // 星4天井まであと何回か
+}
+
 // 天井のカウンター
 var star4LimitCounter int       // 星4以上が出るまでのカウンター
 var star5LimitCounter int       // 星5が出るまでのカウンター
 var isNextPickupGuaranteed bool // 次のガチャでピックアップキャラクターが確定しているかどうかのフラグ
+
+// DBモック
+var gachaHistory []GachaResult // ガチャの履歴を保存するスライス
 
 // メイン関数
 func main() {
@@ -58,6 +68,9 @@ func main() {
 	// ガチャのエンドポイントを設定
 	http.HandleFunc("/gacha", gachaHandler)     // 単発ガチャのエンドポイント /gacha
 	http.HandleFunc("/gacha10", gacha10Handler) // 10連ガチャのエンドポイント /gacha10
+
+	// 履歴だけを取得するエンドポイント
+	http.HandleFunc("/history", historyHandler)
 
 	// サーバー起動のメッセージを表示
 	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080 にアクセスしてください。")
@@ -72,9 +85,11 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// ガチャの結果を判定する関数を呼び出して、結果を取得
 	result := gachaJudgment()
 
-	// 結果をJSONに変換して、リクエスト元に返す
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(result)
+	// 履歴に追加
+	gachaHistory = append(gachaHistory, result)
+
+	// レスポンス作成
+	sendGachaResponse(w, []GachaResult{result})
 }
 
 // 10連ガチャの処理を行う関数
@@ -83,12 +98,32 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 
 	for i := 0; i < 10; i++ {
 		// ガチャの結果を判定する関数を呼び出して、結果を取得して、resultsの配列に追加
-		results = append(results, gachaJudgment())
+		result := gachaJudgment()
+		results = append(results, result)
+
+		// 履歴に追加
+		gachaHistory = append(gachaHistory, result)
 	}
 
-	// 結果をJSONに変換して、リクエスト元に返す
+	// レスポンス作成
+	sendGachaResponse(w, results)
+}
+
+// 履歴を返すハンドラー
+func historyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(results)
+	json.NewEncoder(w).Encode(gachaHistory)
+}
+
+// 共通のレスポンス送信処理
+func sendGachaResponse(w http.ResponseWriter, results []GachaResult) {
+	response := GachaResponse{
+		Results:   results,
+		Pity5Star: (star5Limit + 1) - star5LimitCounter, // あと何回か
+		Pity4Star: (star4Limit + 1) - star4LimitCounter,
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	json.NewEncoder(w).Encode(response)
 }
 
 // ガチャの結果を判定する関数

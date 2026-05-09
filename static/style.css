@@ -20,6 +20,27 @@ body {
     font-size: 24px; 
     font-weight: bold; 
 }
+#pity-info {
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+#history-area {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: left;
+    font-size: 16px;
+    max-height: 300px;
+    overflow-y: auto; /* スクロール可能に */
+    border: 1px solid #ddd;
+    padding: 10px;
+}
 .star5 { color: #d32f2f; }
 .star4 { color: #7b1fa2; }
 .star3 { color: #1976d2; }
+.history-item {
+    border-bottom: 1px solid #eee;
+    padding: 4px 0;
+}
