@@ -73,6 +73,8 @@ func main() {
 
 	// 履歴だけを取得するエンドポイント
 	http.HandleFunc("/history", historyHandler)
+	// 天井カウンターを取得するエンドポイント
+	http.HandleFunc("/limit", limitHandler)
 
 	// サーバー起動のメッセージを表示
 	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080 にアクセスしてください。")
@@ -142,6 +144,22 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 	sendGachaResponse(w, results, user)
 }
 
+// 天井カウンターを返すハンドラー
+func limitHandler(w http.ResponseWriter, r *http.Request) {
+	// ユーザーIDからユーザーデータを取得
+	uid := r.URL.Query().Get("uid")
+	if uid == "" {
+		uid = "guest"
+	}
+	user := getUserData(uid)
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	json.NewEncoder(w).Encode(map[string]int{
+		"star4LimitCounter": user.Star4LimitCounter,
+		"star5LimitCounter": user.Star5LimitCounter,
+	})
+}
+
 // 履歴を返すハンドラー
 func historyHandler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
@@ -150,6 +168,13 @@ func historyHandler(w http.ResponseWriter, r *http.Request) {
 		uid = "guest"
 	}
 	user := getUserData(uid)
+
+	// 履歴が空の場合は、空の配列を返す
+	if len(user.GachaHistory) == 0 {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode([]GachaResult{})
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(user.GachaHistory)
