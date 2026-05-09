@@ -8,9 +8,19 @@
 <body>
 
     <h1>ガチャシミュレーター</h1>
+    
+    <div id="pity-info">
+        星5天井まであと: <span id="pity5-count">90</span>回 / 
+        星4確定まであと: <span id="pity4-count">10</span>回
+    </div>
+
     <button id="gacha-btn" onclick="drawGacha()">単発</button>
     <button id="gacha-btn" onclick="drawGacha10()" style="background-color: #e91e63;">10連</button>
     <div id="result-area">結果はここに表示されます</div>
+
+    <hr>
+    <h3>ガチャ履歴（直近50件）</h3>
+    <div id="history-area"></div>
 
     <script src="script.js"></script>
     

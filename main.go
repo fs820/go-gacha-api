@@ -119,8 +119,8 @@ func historyHandler(w http.ResponseWriter, r *http.Request) {
 func sendGachaResponse(w http.ResponseWriter, results []GachaResult) {
 	response := GachaResponse{
 		Results:   results,
-		Pity5Star: (star5Limit + 1) - star5LimitCounter, // あと何回か
-		Pity4Star: (star4Limit + 1) - star4LimitCounter,
+		Pity5Star: star5Limit - star5LimitCounter, // あと何回か
+		Pity4Star: star4Limit - star4LimitCounter,
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(response)
