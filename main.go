@@ -20,13 +20,23 @@ const (
 	star3Character = "光円錐" // 星3のキャラクター
 
 	// 天井の回数を定数として定義
-	star4Limit = 9  // 星4以上が出るまでの天井回数
-	star5Limit = 89 // 星5が出るまでの天井回数
+	star4Limit = 10 // 星4以上が出るまでの回数
+	star5Limit = 90 // 星5が出るまでの回数
 
 	// ソフトピティの設定
-	pitySoftStart     = 73 // 確率が上がり始める回数 (74連目)
+	pitySoftStart     = 74 // 確率が上がり始める回数
 	softPityIncrement = 6  // 確率が上がる割合 (6%ずつ増加)
 )
+
+// --- 排出キャラクターのリスト ---
+// ピックアップ星5
+var pickupStar5 = "サフェル"
+
+// すり抜け星5（7名）
+var standardStar5 = []string{"姫子", "ヴェルト", "ブローニャ", "ジェパード", "クラーラ", "彦卿", "白露"}
+
+// ピックアップ星4（3名）
+var pickupStar4 = []string{"三月なのか", "丹恒", "アスター"}
 
 // ガチャの結果を入れる構造体 変数名の先頭が大文字にすると外部からアクセスできる（JSONに変換するために必要）
 type GachaResult struct {
@@ -35,8 +45,9 @@ type GachaResult struct {
 }
 
 // 天井のカウンター
-var star4LimitCounter int // 星4以上が出るまでのカウンター
-var star5LimitCounter int // 星5が出るまでのカウンター
+var star4LimitCounter int       // 星4以上が出るまでのカウンター
+var star5LimitCounter int       // 星5が出るまでのカウンター
+var isNextPickupGuaranteed bool // 次のガチャでピックアップキャラクターが確定しているかどうかのフラグ
 
 // メイン関数
 func main() {
@@ -82,6 +93,10 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 
 // ガチャの結果を判定する関数
 func gachaJudgment() GachaResult {
+	// カウンターをインクリメント
+	star4LimitCounter++ // 星4以上が出るまでのカウンター
+	star5LimitCounter++ // 星5が出るまでのカウンター
+
 	// 0〜999の乱数を生成
 	roll := rand.Intn(1000)
 
@@ -96,19 +111,38 @@ func gachaJudgment() GachaResult {
 
 	// 確率の判定
 	if roll < star5Prob || star5LimitCounter >= star5Limit {
-		// 0.6%の確率で星5 （もしくは、89回連続で星5が出ていない場合は強制的に星5）
+		// 0.6%の確率で星5 （もしくは、天井カウンターが90連目の場合は強制的に星5）
 		star4LimitCounter = 0 // カウンターをリセット
 		star5LimitCounter = 0 // カウンターをリセット
-		return GachaResult{Rarity: "星5", Character: "ゼーレ"}
+
+		// ピックアップキャラクターの当選判定を行う関数を呼び出す
+		return pickupJudgment()
 	} else if roll < (star5Prob+probBaseStar4) || star4LimitCounter >= star4Limit {
-		// 5.1%の確率で星4 （もしくは、9回連続で星4以上が出ていない場合は強制的に星4）
+		// 5.1%の確率で星4 （もしくは、天井カウンターが10連目の場合は強制的に星4）
 		star4LimitCounter = 0 // カウンターをリセット
-		star5LimitCounter++   // カウンターをインクリメント
-		return GachaResult{Rarity: "星4", Character: "丹恒"}
+
+		randomIndex := rand.Intn(len(pickupStar4)) // ピックアップ星4キャラクターの中からランダムに選ぶ
+		return GachaResult{Rarity: "星4", Character: pickupStar4[randomIndex]}
 	} else {
 		// 94.3%の確率で星3
-		star4LimitCounter++ // カウンターをインクリメント
-		star5LimitCounter++ // カウンターをインクリメント
 		return GachaResult{Rarity: "星3", Character: "光円錐"}
+	}
+}
+
+// ピックアップキャラクターの当選判定を行う関数
+func pickupJudgment() GachaResult {
+	// ピックアップキャラクターが確定している場合は、ピックアップキャラクターを返す
+	if isNextPickupGuaranteed {
+		isNextPickupGuaranteed = false // フラグをリセット
+		return GachaResult{Rarity: "星5", Character: pickupStar5}
+	} else {
+		// ピックアップキャラクターが確定していない場合は、50%の確率でピックアップキャラクター、50%の確率ですり抜けキャラクターを返す
+		if rand.Intn(2) == 0 {
+			return GachaResult{Rarity: "星5", Character: pickupStar5}
+		} else {
+			isNextPickupGuaranteed = true                // 次のガチャでピックアップキャラクターが確定するようにフラグをセット
+			randomIndex := rand.Intn(len(standardStar5)) // すり抜けキャラクターの中からランダムに選ぶ
+			return GachaResult{Rarity: "星5", Character: standardStar5[randomIndex]}
+		}
 	}
 }
