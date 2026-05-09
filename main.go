@@ -30,13 +30,13 @@ const (
 
 // --- 排出キャラクターのリスト ---
 // ピックアップ星5
-var pickupStar5 = "サフェル"
+var pickupStar5 = "銀狼Lv999"
 
 // すり抜け星5（7名）
-var standardStar5 = []string{"姫子", "ヴェルト", "ブローニャ", "ジェパード", "クラーラ", "彦卿", "白露"}
+var standardStar5 = []string{"銀狼", "雲璃", "アルジェンティ", "ゼーレ", "符玄", "刃", "ヴェルト"}
 
 // ピックアップ星4（3名）
-var pickupStar4 = []string{"三月なのか", "丹恒", "アスター"}
+var pickupStar4 = []string{"フック", "雪衣", "ギャラガー"}
 
 // ガチャの結果を入れる構造体 変数名の先頭が大文字にすると外部からアクセスできる（JSONに変換するために必要）
 type GachaResult struct {
