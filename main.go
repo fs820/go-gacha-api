@@ -14,11 +14,6 @@ const (
 	probBaseStar5 = 6  // 星5の当たる基本確率（6/1000 = 0.6%）
 	probBaseStar4 = 51 // 星4の当たる基本確率（51/1000 = 5.1%）
 
-	// キャラクターの名前を定数として定義
-	star5Character = "ゼーレ" // 星5のキャラクター
-	star4Character = "丹恒"  // 星4のキャラクター
-	star3Character = "光円錐" // 星3のキャラクター
-
 	// 天井の回数を定数として定義
 	star4Limit = 10 // 星4以上が出るまでの回数
 	star5Limit = 90 // 星5が出るまでの回数
@@ -30,13 +25,15 @@ const (
 
 // --- 排出キャラクターのリスト ---
 // ピックアップ星5
-var pickupStar5 = "銀狼Lv999"
+var pickupStar5 = "ゼウス"
 
 // すり抜け星5（7名）
-var standardStar5 = []string{"銀狼", "雲璃", "アルジェンティ", "ゼーレ", "符玄", "刃", "ヴェルト"}
+var standardStar5 = []string{"ウラノス", "クロノス", "釈迦", "キリスト", "シヴァ", "ポセイドン", "ヘラクレス"}
 
 // ピックアップ星4（3名）
-var pickupStar4 = []string{"フック", "雪衣", "ギャラガー"}
+var pickupStar4 = []string{"ヨハネ", "千手観音", "アキレス"}
+
+var star3 = "武器" // 星3
 
 // ユーザデータ
 type UserData struct {
@@ -155,8 +152,8 @@ func limitHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(map[string]int{
-		"star4LimitCounter": user.Star4LimitCounter,
-		"star5LimitCounter": user.Star5LimitCounter,
+		"star4LimitCounter": star4Limit - user.Star4LimitCounter,
+		"star5LimitCounter": star5Limit - user.Star5LimitCounter,
 	})
 }
 
@@ -225,7 +222,7 @@ func gachaJudgment(user *UserData) GachaResult {
 		return GachaResult{Rarity: "星4", Character: pickupStar4[randomIndex]}
 	} else {
 		// 94.3%の確率で星3
-		return GachaResult{Rarity: "星3", Character: "光円錐"}
+		return GachaResult{Rarity: "星3", Character: star3}
 	}
 }
 

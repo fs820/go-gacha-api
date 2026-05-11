@@ -1,7 +1,7 @@
 // ページが読み込まれたときに、天井カウンターと履歴をサーバーから取得してUIを更新する
 window.onload = function() {
-    updateLimitUI();
-    updateHistoryUI();
+    loadHistoryFromServer();
+    loadLimitFromServer();
 };
 
 // 単発ガチャボタンが押された時の処理
@@ -58,20 +58,20 @@ async function drawGacha10() {
 }
 
 // 天井カウンターをサーバーから取得してUIを更新する関数
-async function updateLimitUI() {
+async function loadLimitFromServer() {
     try {
         // サーバーの /limit エンドポイントにリクエストを送る
         const response = await fetch("/limit");
         const data = await response.json();
         // 天井カウンターを更新する
-        updatePityUI(data.pity5Star, data.pity4Star);
+        updatePityUI(data.star5LimitCounter, data.star4LimitCounter);
     } catch (error) {
         console.error("天井カウンターの取得に失敗:", error);
     }
 }
 
 // 履歴をサーバーから取得してUIを更新する関数
-async function updateHistoryUI() {
+async function loadHistoryFromServer() {
     try {
         // サーバーの /history エンドポイントにリクエストを送る
         const response = await fetch("/history");
@@ -79,7 +79,7 @@ async function updateHistoryUI() {
         // 履歴表示を更新する
         const historyArea = document.getElementById("history-area");
         historyArea.innerHTML = "";
-        data.history.forEach(item => {
+        data.forEach(item => {
             let colorClass = item.rarity === "星5" ? "star5" : (item.rarity === "星4" ? "star4" : "star3");
             historyArea.innerHTML += `<div class="history-item ${colorClass}">【${item.rarity}】 ${item.character}</div>`;
         });
