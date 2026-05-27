@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"sync"
 )
 
 // 定数の定義
@@ -56,7 +57,10 @@ type GachaResponse struct {
 	Pity4Star int           `json:"pity4Star"` // 星4天井まであと何回か
 }
 
-var userDB = make(map[string]*UserData) // ユーザIDをキーにしてユーザデータを保存するマップ
+var (
+	userDB = make(map[string]*UserData) // ユーザIDをキーにしてユーザデータを保存するマップ
+	dbMu   sync.Mutex                   // データの競合を防ぐためのロック
+)
 
 // メイン関数
 func main() {
@@ -83,6 +87,9 @@ func main() {
 
 // ユーザーIDからデータを取得する関数
 func getUserData(uid string) *UserData {
+	dbMu.Lock()         // データベースへのアクセスをロック
+	defer dbMu.Unlock() // 関数が終わるときにロックを解除
+
 	// 指定されたuidのデータが存在しない場合
 	if userDB[uid] == nil {
 		// メモリを確保して初期化（C++の new UserData() と同じ）
