@@ -2,9 +2,11 @@ package main // エントリーポイント
 
 // ライブラリのインポート
 import (
+	crand "crypto/rand" // 暗号用 (安全)
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	"math/rand/v2" // ガチャ用 (高速)
 	"net/http"
 	"sync"
 )
@@ -85,6 +87,41 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+// セッションIDを生成する関数
+func generateSessionID() string {
+	b := make([]byte, 16)
+	crand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// 【新規追加】CookieからセッションIDを取得、無ければ新規発行してブラウザに植え付ける関数
+func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
+	// 1. リクエストから "session_id" という名前のCookieを探す
+	cookie, err := r.Cookie("session_id")
+
+	// エラーがない（＝すでにCookieを持っている）場合は、そのIDをそのまま返す
+	if err == nil {
+		return cookie.Value
+	}
+
+	// 2. Cookieを持っていない場合は、新しいセッションIDを生成
+	newID := generateSessionID()
+
+	// 3. ブラウザにCookieを保存させるための設定オブジェクトを作成
+	newCookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    newID,
+		Path:     "/",        // サイト内の全ページでこのCookieを有効にする
+		HttpOnly: true,       // JavaScriptからCookieを盗まれるのを防ぐセキュリティ設定
+		MaxAge:   86400 * 30, // 有効期限（秒数）。ここでは30日間保持
+	}
+
+	// 4. レスポンス（返信用封筒）にCookieを忍ばせる
+	http.SetCookie(w, newCookie)
+
+	return newID
+}
+
 // ユーザーIDからデータを取得する関数
 func getUserData(uid string) *UserData {
 	dbMu.Lock()         // データベースへのアクセスをロック
@@ -101,10 +138,7 @@ func getUserData(uid string) *UserData {
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
-	uid := r.URL.Query().Get("uid")
-	if uid == "" {
-		uid = "guest"
-	}
+	uid := getOrCreateSession(w, r)
 	user := getUserData(uid)
 
 	// ガチャの結果を判定する関数を呼び出して、結果を取得
@@ -124,10 +158,7 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 // 10連ガチャの処理を行う関数
 func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
-	uid := r.URL.Query().Get("uid")
-	if uid == "" {
-		uid = "guest"
-	}
+	uid := getOrCreateSession(w, r)
 	user := getUserData(uid)
 
 	var results []GachaResult
@@ -151,10 +182,7 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 // 天井カウンターを返すハンドラー
 func limitHandler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
-	uid := r.URL.Query().Get("uid")
-	if uid == "" {
-		uid = "guest"
-	}
+	uid := getOrCreateSession(w, r)
 	user := getUserData(uid)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -167,10 +195,7 @@ func limitHandler(w http.ResponseWriter, r *http.Request) {
 // 履歴を返すハンドラー
 func historyHandler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
-	uid := r.URL.Query().Get("uid")
-	if uid == "" {
-		uid = "guest"
-	}
+	uid := getOrCreateSession(w, r)
 	user := getUserData(uid)
 
 	// 履歴が空の場合は、空の配列を返す
@@ -202,7 +227,7 @@ func gachaJudgment(user *UserData) GachaResult {
 	user.Star5LimitCounter++ // 星5が出るまでのカウンター
 
 	// 0〜999の乱数を生成
-	roll := rand.Intn(1000)
+	roll := rand.IntN(1000)
 
 	// 星5の当たる確率（6/1000 = 0.6%）
 	star5Prob := probBaseStar5
@@ -225,7 +250,7 @@ func gachaJudgment(user *UserData) GachaResult {
 		// 5.1%の確率で星4 （もしくは、天井カウンターが10連目の場合は強制的に星4）
 		user.Star4LimitCounter = 0 // カウンターをリセット
 
-		randomIndex := rand.Intn(len(pickupStar4)) // ピックアップ星4キャラクターの中からランダムに選ぶ
+		randomIndex := rand.IntN(len(pickupStar4)) // ピックアップ星4キャラクターの中からランダムに選ぶ
 		return GachaResult{Rarity: "星4", Character: pickupStar4[randomIndex]}
 	} else {
 		// 94.3%の確率で星3
@@ -241,11 +266,11 @@ func pickupJudgment(user *UserData) GachaResult {
 		return GachaResult{Rarity: "星5", Character: pickupStar5}
 	} else {
 		// ピックアップキャラクターが確定していない場合は、50%の確率でピックアップキャラクター、50%の確率ですり抜けキャラクターを返す
-		if rand.Intn(2) == 0 {
+		if rand.IntN(2) == 0 {
 			return GachaResult{Rarity: "星5", Character: pickupStar5}
 		} else {
 			user.IsNextPickupGuaranteed = true           // 次のガチャでピックアップキャラクターが確定するようにフラグをセット
-			randomIndex := rand.Intn(len(standardStar5)) // すり抜けキャラクターの中からランダムに選ぶ
+			randomIndex := rand.IntN(len(standardStar5)) // すり抜けキャラクターの中からランダムに選ぶ
 			return GachaResult{Rarity: "星5", Character: standardStar5[randomIndex]}
 		}
 	}
