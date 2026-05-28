@@ -79,7 +79,7 @@ async function loadHistoryFromServer() {
         // 履歴表示を更新する
         const historyArea = document.getElementById("history-area");
         historyArea.innerHTML = "";
-        data.forEach(item => {
+        data.reverse().forEach(item => {
             let colorClass = item.rarity === "星5" ? "star5" : (item.rarity === "星4" ? "star4" : "star3");
             historyArea.innerHTML += `<div class="history-item ${colorClass}">【${item.rarity}】 ${item.character}</div>`;
         });
