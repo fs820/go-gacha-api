@@ -2,18 +2,16 @@ package main // エントリーポイント
 
 // ライブラリのインポート
 import (
-	crand "crypto/rand" // 暗号用 (安全)
+	crand "crypto/rand" // 乱数 暗号用 (安全)
 	"database/sql"      // データベース操作に使用
 	"encoding/hex"      // セッションIDの生成に使用
 	"encoding/json"     // JSONのエンコード/デコードに使用
 	"fmt"               // フォーマット用 (文字列の整形など)
 	"log"               // ロギングに使用
-	"math/rand/v2"      // ガチャ用 (高速)
+	"math/rand/v2"      // 乱数 ガチャ用 (高速)
 	"net/http"          // HTTPサーバーの構築に使用
 
-	// "sync"              // データの競合を防ぐためのロックに使用
-
-	_ "modernc.org/sqlite" // SQLiteドライバ (データベース接続のために必要、_はパッケージの初期化のみを行うための記号
+	_ "modernc.org/sqlite" // SQLiteドライバ (データベース接続)
 )
 
 // 定数の定義
@@ -69,11 +67,6 @@ type GachaResponse struct {
 	Pity5Star int           `json:"pity5Star"` // 星5天井まであと何回か
 	Pity4Star int           `json:"pity4Star"` // 星4天井まであと何回か
 }
-
-// var (
-// userDB = make(map[string]*UserData) // ユーザIDをキーにしてユーザデータを保存するマップ
-// dbMu   sync.Mutex                   // データの競合を防ぐためのロック
-// )
 
 var userDB *sql.DB
 
