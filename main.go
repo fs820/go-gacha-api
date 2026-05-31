@@ -177,15 +177,19 @@ func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
 // ユーザーIDからデータを取得する関数
 func getUserData(uid string) *UserData {
 	user := &UserData{}
+	var isGuaranteed int // SQLiteの整数(0か1)を安全に受け取るための一時変数
 
 	// 1. カウンター情報の取得
 	row := userDB.QueryRow("SELECT star4_limit_counter, star5_limit_counter, is_next_pickup_guaranteed FROM users WHERE uid = ?", uid)
-	err := row.Scan(&user.Star4LimitCounter, &user.Star5LimitCounter, &user.IsNextPickupGuaranteed)
+	err := row.Scan(&user.Star4LimitCounter, &user.Star5LimitCounter, &isGuaranteed)
 
 	if err == sql.ErrNoRows {
 		// データが無い（新規ユーザー）の場合は、初期値をDBに登録
 		userDB.Exec("INSERT INTO users (uid) VALUES (?)", uid)
 	}
+
+	// 整数(1)なら true、それ以外(0)なら false に変換して構造体にセット
+	user.IsNextPickupGuaranteed = (isGuaranteed == 1)
 
 	// 2. 履歴の取得（最新の50件を古い順に取り出すSQLのトリック）
 	rows, err := userDB.Query("SELECT rarity, character FROM (SELECT id, rarity, character FROM history WHERE uid = ? ORDER BY id DESC LIMIT 50) AS sub ORDER BY id ASC", uid)
