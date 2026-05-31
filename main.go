@@ -3,16 +3,27 @@ package main // エントリーポイント
 // ライブラリのインポート
 import (
 	crand "crypto/rand" // 暗号用 (安全)
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"math/rand/v2" // ガチャ用 (高速)
-	"net/http"
-	"sync"
+	"database/sql"      // データベース操作に使用
+	"encoding/hex"      // セッションIDの生成に使用
+	"encoding/json"     // JSONのエンコード/デコードに使用
+	"fmt"               // フォーマット用 (文字列の整形など)
+	"log"               // ロギングに使用
+	"math/rand/v2"      // ガチャ用 (高速)
+	"net/http"          // HTTPサーバーの構築に使用
+
+	// "sync"              // データの競合を防ぐためのロックに使用
+
+	_ "github.com/mattn/go-sqlite3" // SQLiteドライバ (データベース接続のために必要、_はパッケージの初期化のみを行うための記号
 )
 
 // 定数の定義
 const (
+	DBFilePath = "./gacha.db" // データベースファイルのパス
+
+	// cookieの日数
+	cookieDays = 30           // セッションIDを保存するCookieの有効期限（日数）
+	oneDay     = 24 * 60 * 60 // 1日の秒数（CookieのMaxAgeに使用）
+
 	// ガチャの確率を定数として定義
 	probBaseStar5 = 6  // 星5の当たる基本確率（6/1000 = 0.6%）
 	probBaseStar4 = 51 // 星4の当たる基本確率（51/1000 = 5.1%）
@@ -59,13 +70,18 @@ type GachaResponse struct {
 	Pity4Star int           `json:"pity4Star"` // 星4天井まであと何回か
 }
 
-var (
-	userDB = make(map[string]*UserData) // ユーザIDをキーにしてユーザデータを保存するマップ
-	dbMu   sync.Mutex                   // データの競合を防ぐためのロック
-)
+// var (
+// userDB = make(map[string]*UserData) // ユーザIDをキーにしてユーザデータを保存するマップ
+// dbMu   sync.Mutex                   // データの競合を防ぐためのロック
+// )
+
+var userDB *sql.DB
 
 // メイン関数
 func main() {
+	// データベースの初期化
+	initDB()
+
 	// "static"フォルダの中身（HTML, CSS, JS）を、そのままブラウザに公開する設定
 	fs := http.FileServer(http.Dir("static"))
 	http.Handle("/", fs)
@@ -87,36 +103,66 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
-// セッションIDを生成する関数
-func generateSessionID() string {
-	b := make([]byte, 16)
-	crand.Read(b)
-	return hex.EncodeToString(b)
+// データベースの初期化関数
+func initDB() {
+	var err error
+	// gacha.db というファイルを開く（無ければ自動で作られる）
+	userDB, err = sql.Open("sqlite3", DBFilePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// ユーザーのカウンター状態を保存するテーブルを作成
+	usersTable := `
+	CREATE TABLE IF NOT EXISTS users (
+		uid TEXT PRIMARY KEY,
+		star4_limit_counter INTEGER DEFAULT 0,
+		star5_limit_counter INTEGER DEFAULT 0,
+		is_next_pickup_guaranteed BOOLEAN DEFAULT 0
+	);`
+	userDB.Exec(usersTable)
+
+	// ガチャの履歴を保存するテーブルを作成
+	historyTable := `
+	CREATE TABLE IF NOT EXISTS history (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		uid TEXT,
+		rarity TEXT,
+		character TEXT
+	);`
+	userDB.Exec(historyTable)
 }
 
-// 【新規追加】CookieからセッションIDを取得、無ければ新規発行してブラウザに植え付ける関数
+// セッションIDを生成する関数
+func generateSessionID() string {
+	b := make([]byte, 16)        // 16バイトのランダムなデータを格納するためのバイトスライスを作成
+	crand.Read(b)                // バイトスライスにランダムなデータを埋める
+	return hex.EncodeToString(b) // バイトスライスを16進数の文字列に変換して返す
+}
+
+// CookieからセッションIDを取得、無ければ新規発行してCookieに保存する関数
 func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
-	// 1. リクエストから "session_id" という名前のCookieを探す
+	// リクエストから "session_id" という名前のCookieを探す
 	cookie, err := r.Cookie("session_id")
 
-	// エラーがない（＝すでにCookieを持っている）場合は、そのIDをそのまま返す
+	// すでにCookieを持っている場合は、そのIDをそのまま返す
 	if err == nil {
 		return cookie.Value
 	}
 
-	// 2. Cookieを持っていない場合は、新しいセッションIDを生成
+	// 新しいセッションIDを生成
 	newID := generateSessionID()
 
-	// 3. ブラウザにCookieを保存させるための設定オブジェクトを作成
+	// ブラウザにCookieを保存させるための設定
 	newCookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    newID,
-		Path:     "/",        // サイト内の全ページでこのCookieを有効にする
-		HttpOnly: true,       // JavaScriptからCookieを盗まれるのを防ぐセキュリティ設定
-		MaxAge:   86400 * 30, // 有効期限（秒数）。ここでは30日間保持
+		Path:     "/",                 // サイト内の全ページでこのCookieを有効にする
+		HttpOnly: true,                // JavaScriptからCookieを盗まれるのを防ぐセキュリティ設定
+		MaxAge:   oneDay * cookieDays, // 有効期限（秒数）
 	}
 
-	// 4. レスポンス（返信用封筒）にCookieを忍ばせる
+	// レスポンスにCookieを入れる
 	http.SetCookie(w, newCookie)
 
 	return newID
@@ -124,25 +170,56 @@ func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
 
 // ユーザーIDからデータを取得する関数
 func getUserData(uid string) *UserData {
-	dbMu.Lock()         // データベースへのアクセスをロック
-	defer dbMu.Unlock() // 関数が終わるときにロックを解除
+	user := &UserData{}
 
-	// 指定されたuidのデータが存在しない場合
-	if userDB[uid] == nil {
-		// メモリを確保して初期化（C++の new UserData() と同じ）
-		userDB[uid] = &UserData{}
+	// 1. カウンター情報の取得
+	row := userDB.QueryRow("SELECT star4_limit_counter, star5_limit_counter, is_next_pickup_guaranteed FROM users WHERE uid = ?", uid)
+	err := row.Scan(&user.Star4LimitCounter, &user.Star5LimitCounter, &user.IsNextPickupGuaranteed)
+
+	if err == sql.ErrNoRows {
+		// データが無い（新規ユーザー）の場合は、初期値をDBに登録
+		userDB.Exec("INSERT INTO users (uid) VALUES (?)", uid)
 	}
-	return userDB[uid]
+
+	// 2. 履歴の取得（最新の50件を古い順に取り出すSQLのトリック）
+	rows, _ := userDB.Query("SELECT rarity, character FROM (SELECT id, rarity, character FROM history WHERE uid = ? ORDER BY id DESC LIMIT 50) ORDER BY id ASC", uid)
+	defer rows.Close() // 使い終わったら必ず閉じる
+
+	for rows.Next() {
+		var res GachaResult
+		rows.Scan(&res.Rarity, &res.Character)
+		user.GachaHistory = append(user.GachaHistory, res)
+	}
+
+	return user
+}
+
+// 【新規追加】ガチャを引いた後、最新のカウンター状態をDBに上書き保存する
+func updateUserData(uid string, user *UserData) {
+	userDB.Exec("UPDATE users SET star4_limit_counter = ?, star5_limit_counter = ?, is_next_pickup_guaranteed = ? WHERE uid = ?",
+		user.Star4LimitCounter, user.Star5LimitCounter, user.IsNextPickupGuaranteed, uid)
+}
+
+// 【新規追加】引いたキャラクターを履歴DBに追加する
+func addHistory(uid string, result GachaResult) {
+	userDB.Exec("INSERT INTO history (uid, rarity, character) VALUES (?, ?, ?)",
+		uid, result.Rarity, result.Character)
 }
 
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
-	// ユーザーIDからユーザーデータを取得
+	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
 	uid := getOrCreateSession(w, r)
+	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
 	// ガチャの結果を判定する関数を呼び出して、結果を取得
 	result := gachaJudgment(user)
+
+	// DBにユーザーデータを保存
+	updateUserData(uid, user)
+	// DBに履歴を追加
+	addHistory(uid, result)
 
 	// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 	user.GachaHistory = append(user.GachaHistory, result)
@@ -157,8 +234,9 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 
 // 10連ガチャの処理を行う関数
 func gacha10Handler(w http.ResponseWriter, r *http.Request) {
-	// ユーザーIDからユーザーデータを取得
+	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
 	uid := getOrCreateSession(w, r)
+	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
 	var results []GachaResult
@@ -166,6 +244,9 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 		// ガチャの結果を判定する関数を呼び出して、結果を取得して、resultsの配列に追加
 		result := gachaJudgment(user)
 		results = append(results, result)
+
+		// DBに履歴を追加
+		addHistory(uid, result)
 
 		// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 		user.GachaHistory = append(user.GachaHistory, result)
@@ -175,14 +256,18 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// DBにユーザーデータを保存
+	updateUserData(uid, user)
+
 	// レスポンス作成
 	sendGachaResponse(w, results, user)
 }
 
 // 天井カウンターを返すハンドラー
 func limitHandler(w http.ResponseWriter, r *http.Request) {
-	// ユーザーIDからユーザーデータを取得
+	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
 	uid := getOrCreateSession(w, r)
+	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -194,8 +279,9 @@ func limitHandler(w http.ResponseWriter, r *http.Request) {
 
 // 履歴を返すハンドラー
 func historyHandler(w http.ResponseWriter, r *http.Request) {
-	// ユーザーIDからユーザーデータを取得
+	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
 	uid := getOrCreateSession(w, r)
+	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
 	// 履歴が空の場合は、空の配列を返す
