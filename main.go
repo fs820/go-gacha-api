@@ -13,7 +13,7 @@ import (
 
 	// "sync"              // データの競合を防ぐためのロックに使用
 
-	_ "github.com/mattn/go-sqlite3" // SQLiteドライバ (データベース接続のために必要、_はパッケージの初期化のみを行うための記号
+	_ "modernc.org/sqlite" // SQLiteドライバ (データベース接続のために必要、_はパッケージの初期化のみを行うための記号
 )
 
 // 定数の定義
@@ -107,7 +107,7 @@ func main() {
 func initDB() {
 	var err error
 	// gacha.db というファイルを開く（無ければ自動で作られる）
-	userDB, err = sql.Open("sqlite3", DBFilePath)
+	userDB, err = sql.Open("sqlite", DBFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
