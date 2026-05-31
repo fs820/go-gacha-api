@@ -24,7 +24,9 @@ async function drawGacha() {
         updatePityUI(data.pity5Star, data.pity4Star);
         updateHistoryUI(res.character, res.rarity);
     } catch (error) {
-        resultArea.innerHTML = "エラーが発生しました";
+        // エラーの具体的な中身（error.message）を画面に出す！
+        resultArea.innerHTML = "エラー詳細: " + error.message;
+        console.error("通信エラー:", error);
     }
 }
 
@@ -53,7 +55,9 @@ async function drawGacha10() {
         // UI更新
         updatePityUI(data.pity5Star, data.pity4Star);
     } catch (error) {
-        resultArea.innerHTML = "エラーが発生しました";
+        // エラーの具体的な中身（error.message）を画面に出す！
+        resultArea.innerHTML = "エラー詳細: " + error.message;
+        console.error("通信エラー:", error);
     }
 }
 
@@ -66,6 +70,7 @@ async function loadLimitFromServer() {
         // 天井カウンターを更新する
         updatePityUI(data.star5LimitCounter, data.star4LimitCounter);
     } catch (error) {
+        // エラーの具体的な中身（error.message）を画面に出す！
         console.error("天井カウンターの取得に失敗:", error);
     }
 }
