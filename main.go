@@ -120,7 +120,10 @@ func initDB() {
 		star5_limit_counter INTEGER DEFAULT 0,
 		is_next_pickup_guaranteed BOOLEAN DEFAULT 0
 	);`
-	userDB.Exec(usersTable)
+	_, err = userDB.Exec(usersTable)
+	if err != nil {
+		log.Fatal("usersテーブル作成エラー:", err)
+	}
 
 	// ガチャの履歴を保存するテーブルを作成
 	historyTable := `
@@ -130,7 +133,10 @@ func initDB() {
 		rarity TEXT,
 		character TEXT
 	);`
-	userDB.Exec(historyTable)
+	_, err = userDB.Exec(historyTable)
+	if err != nil {
+		log.Fatal("historyテーブル作成エラー:", err)
+	}
 }
 
 // セッションIDを生成する関数
@@ -182,7 +188,11 @@ func getUserData(uid string) *UserData {
 	}
 
 	// 2. 履歴の取得（最新の50件を古い順に取り出すSQLのトリック）
-	rows, _ := userDB.Query("SELECT rarity, character FROM (SELECT id, rarity, character FROM history WHERE uid = ? ORDER BY id DESC LIMIT 50) ORDER BY id ASC", uid)
+	rows, err := userDB.Query("SELECT rarity, character FROM (SELECT id, rarity, character FROM history WHERE uid = ? ORDER BY id DESC LIMIT 50) AS sub ORDER BY id ASC", uid)
+	if err != nil {
+		log.Println("履歴取得エラー:", err)
+		return user // エラーが起きたらここで中断し、サーバークラッシュを防ぐ
+	}
 	defer rows.Close() // 使い終わったら必ず閉じる
 
 	for rows.Next() {
@@ -194,16 +204,22 @@ func getUserData(uid string) *UserData {
 	return user
 }
 
-// 【新規追加】ガチャを引いた後、最新のカウンター状態をDBに上書き保存する
+// ガチャを引いた後、最新のカウンター状態をDBに上書き保存する
 func updateUserData(uid string, user *UserData) {
-	userDB.Exec("UPDATE users SET star4_limit_counter = ?, star5_limit_counter = ?, is_next_pickup_guaranteed = ? WHERE uid = ?",
+	_, err := userDB.Exec("UPDATE users SET star4_limit_counter = ?, star5_limit_counter = ?, is_next_pickup_guaranteed = ? WHERE uid = ?",
 		user.Star4LimitCounter, user.Star5LimitCounter, user.IsNextPickupGuaranteed, uid)
+	if err != nil {
+		log.Println("データ保存エラー:", err)
+	}
 }
 
-// 【新規追加】引いたキャラクターを履歴DBに追加する
+// 引いたキャラクターを履歴DBに追加する
 func addHistory(uid string, result GachaResult) {
-	userDB.Exec("INSERT INTO history (uid, rarity, character) VALUES (?, ?, ?)",
+	_, err := userDB.Exec("INSERT INTO history (uid, rarity, character) VALUES (?, ?, ?)",
 		uid, result.Rarity, result.Character)
+	if err != nil {
+		log.Println("履歴保存エラー:", err)
+	}
 }
 
 // ガチャの処理を行う関数
