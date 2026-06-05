@@ -111,3 +111,22 @@ func saveGachaResultTx(uid string, user *UserData, results []GachaResult, cost i
 	// コミットして確定
 	return tx.Commit()
 }
+
+// ガチャ石を追加する関数 （トランザクション版）
+func addStonesTx(uid string, stonesToAdd int) error {
+	// トランザクションの開始
+	tx, err := userDB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// 石を追加する
+	_, err = tx.Exec("UPDATE users SET stones = stones + ? WHERE uid = ?", stonesToAdd, uid)
+	if err != nil {
+		tx.Rollback() // エラーが起きたらロールバック
+		return err
+	}
+
+	// コミットして確定
+	return tx.Commit()
+}

@@ -101,6 +101,26 @@ func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
 	return newID
 }
 
+// 石を追加するハンドラー（デバッグ用）
+func addStonesHandler(w http.ResponseWriter, r *http.Request) {
+	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
+	uid := getOrCreateSession(w, r)
+
+	// 石を追加する関数を呼び出す（トランザクション版）
+	err := addStonesTx(uid, 1000)
+	if err != nil {
+		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
+		return
+	}
+
+	// ユーザーデータを取得して、レスポンスを返す
+	user := getUserData(uid)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	json.NewEncoder(w).Encode(map[string]int{
+		"stones": user.Stones,
+	})
+}
+
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す

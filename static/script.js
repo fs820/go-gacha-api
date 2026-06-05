@@ -75,6 +75,25 @@ async function drawGacha10() {
     }
 }
 
+// 石を追加するボタンが押された時の処理（デバッグ用）
+async function addStones() {
+    try {
+        // サーバーの /add_stones エンドポイントにリクエストを送る
+        const response = await fetch("/add_stones");
+        if (!response.ok) {
+            const errorText = await response.text();
+            alert(errorText);
+            return;
+        }
+        const data = await response.json();
+        // 石の所持数を更新する
+        document.getElementById("stone-count").innerText = data.stones;
+    } catch (error) {
+        // エラーの具体的な中身（error.message）を画面に出す！
+        console.error("石の追加に失敗:", error);
+    }
+}
+
 // 天井カウンターをサーバーから取得してUIを更新する関数
 async function loadLimitFromServer() {
     try {
