@@ -13,6 +13,13 @@ async function drawGacha() {
     try {
         // サーバーの /gacha エンドポイントにリクエストを送る
         const response = await fetch("/gacha");
+        // 石不足などのエラーをキャッチして、ユーザーに知らせる
+        if (!response.ok) {
+            const errorText = await response.text();
+            alert(errorText);
+            resultArea.innerHTML = "キャンセルされました";
+            return;
+        }
         const data = await response.json();
 
         // 結果を表示する
@@ -21,7 +28,7 @@ async function drawGacha() {
         resultArea.innerHTML = `<span class="${colorClass}">【${res.rarity}】 ${res.character}</span>`;
         
         // UI更新
-        updatePityUI(data.pity5Star, data.pity4Star);
+        updatePityUI(data.pity5Star, data.pity4Star, data.stones);
         updateHistoryUI(res.character, res.rarity);
     } catch (error) {
         // エラーの具体的な中身（error.message）を画面に出す！
@@ -39,6 +46,13 @@ async function drawGacha10() {
     try {
         // サーバーの /gacha10 エンドポイントにリクエストを送る
         const response = await fetch("/gacha10");
+        // 石不足などのエラーをキャッチして、ユーザーに知らせる
+        if (!response.ok) {
+            const errorText = await response.text();
+            alert(errorText);
+            resultArea.innerHTML = "キャンセルされました";
+            return;
+        }
         const data = await response.json();
 
         resultArea.innerHTML = "";
@@ -53,7 +67,7 @@ async function drawGacha10() {
         });
 
         // UI更新
-        updatePityUI(data.pity5Star, data.pity4Star);
+        updatePityUI(data.pity5Star, data.pity4Star, data.stones);
     } catch (error) {
         // エラーの具体的な中身（error.message）を画面に出す！
         resultArea.innerHTML = "エラー詳細: " + error.message;
@@ -68,7 +82,7 @@ async function loadLimitFromServer() {
         const response = await fetch("/limit");
         const data = await response.json();
         // 天井カウンターを更新する
-        updatePityUI(data.star5LimitCounter, data.star4LimitCounter);
+        updatePityUI(data.star5LimitCounter, data.star4LimitCounter, data.stones);
     } catch (error) {
         // エラーの具体的な中身（error.message）を画面に出す！
         console.error("天井カウンターの取得に失敗:", error);
@@ -94,9 +108,12 @@ async function loadHistoryFromServer() {
 }
 
 // 天井表示を更新する共通関数
-function updatePityUI(pity5, pity4) {
+function updatePityUI(pity5, pity4, stones) {
     document.getElementById("pity5-count").innerText = pity5;
     document.getElementById("pity4-count").innerText = pity4;
+    if(stones !== undefined) {
+        document.getElementById("stone-count").innerText = stones;
+    }
 }
 
 // 履歴表示を更新する共通関数

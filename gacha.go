@@ -15,6 +15,9 @@ const (
 	cookieDays = 30           // セッションIDを保存するCookieの有効期限（日数）
 	oneDay     = 24 * 60 * 60 // 1日の秒数（CookieのMaxAgeに使用）
 
+	// ガチャ1回あたりの石の消費量
+	gachaCost = 300
+
 	// ガチャの確率を定数として定義
 	probBaseStar5 = 6  // 星5の当たる基本確率（6/1000 = 0.6%）
 	probBaseStar4 = 51 // 星4の当たる基本確率（51/1000 = 5.1%）
@@ -42,6 +45,7 @@ var star3 = "武器" // 星3
 
 // ユーザデータ
 type UserData struct {
+	Stones                 int
 	Star4LimitCounter      int
 	Star5LimitCounter      int
 	IsNextPickupGuaranteed bool
@@ -59,6 +63,7 @@ type GachaResponse struct {
 	Results   []GachaResult `json:"results"`   // 今回の結果リスト
 	Pity5Star int           `json:"pity5Star"` // 星5天井まであと何回か
 	Pity4Star int           `json:"pity4Star"` // 星4天井まであと何回か
+	Stones    int           `json:"stones"`    // 所持石数
 }
 
 // セッションIDを生成する関数
@@ -103,13 +108,24 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
+	// 石の所持数をチェックして、足りない場合はエラーを返す
+	if user.Stones < gachaCost {
+		http.Error(w, "石が足りません！", http.StatusBadRequest)
+		return
+	}
+
 	// ガチャの結果を判定する関数を呼び出して、結果を取得
 	result := gachaJudgment(user)
 
-	// DBにユーザーデータを保存
-	updateUserData(uid, user)
-	// DBに履歴を追加
-	addHistory(uid, result)
+	// DB保存
+	err := saveGachaResultTx(uid, user, []GachaResult{result}, gachaCost)
+	if err != nil {
+		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
+		return
+	}
+
+	// 石を消費
+	user.Stones -= gachaCost
 
 	// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 	user.GachaHistory = append(user.GachaHistory, result)
@@ -129,14 +145,17 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
+	// 石の所持数をチェックして、足りない場合はエラーを返す
+	if user.Stones < gachaCost*10 {
+		http.Error(w, "石が足りません！", http.StatusBadRequest)
+		return
+	}
+
 	var results []GachaResult
 	for i := 0; i < 10; i++ {
 		// ガチャの結果を判定する関数を呼び出して、結果を取得して、resultsの配列に追加
 		result := gachaJudgment(user)
 		results = append(results, result)
-
-		// DBに履歴を追加
-		addHistory(uid, result)
 
 		// 履歴に追加 (50件を超えていたら、一番古い要素を切り捨てる)
 		user.GachaHistory = append(user.GachaHistory, result)
@@ -146,8 +165,15 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// DBにユーザーデータを保存
-	updateUserData(uid, user)
+	// DB保存
+	err := saveGachaResultTx(uid, user, results, gachaCost*10)
+	if err != nil {
+		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
+		return
+	}
+
+	// 石を消費
+	user.Stones -= gachaCost * 10
 
 	// レスポンス作成
 	sendGachaResponse(w, results, user)
@@ -164,6 +190,7 @@ func limitHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int{
 		"star4LimitCounter": star4Limit - user.Star4LimitCounter,
 		"star5LimitCounter": star5Limit - user.Star5LimitCounter,
+		"stones":            user.Stones,
 	})
 }
 
@@ -191,6 +218,7 @@ func sendGachaResponse(w http.ResponseWriter, results []GachaResult, user *UserD
 		Results:   results,
 		Pity5Star: star5Limit - user.Star5LimitCounter, // あと何回か
 		Pity4Star: star4Limit - user.Star4LimitCounter,
+		Stones:    user.Stones, // 所持石数
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(response)

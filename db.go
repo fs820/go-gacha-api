@@ -25,6 +25,7 @@ func initDB() {
 	usersTable := `
 	CREATE TABLE IF NOT EXISTS users (
 		uid TEXT PRIMARY KEY,
+		stones INTEGER DEFAULT 30000,
 		star4_limit_counter INTEGER DEFAULT 0,
 		star5_limit_counter INTEGER DEFAULT 0,
 		is_next_pickup_guaranteed BOOLEAN DEFAULT 0
@@ -54,8 +55,8 @@ func getUserData(uid string) *UserData {
 	var isGuaranteed int // SQLiteの整数(0か1)を安全に受け取るための一時変数
 
 	// カウンター情報の取得
-	row := userDB.QueryRow("SELECT star4_limit_counter, star5_limit_counter, is_next_pickup_guaranteed FROM users WHERE uid = ?", uid)
-	err := row.Scan(&user.Star4LimitCounter, &user.Star5LimitCounter, &isGuaranteed)
+	row := userDB.QueryRow("SELECT stones, star4_limit_counter, star5_limit_counter, is_next_pickup_guaranteed FROM users WHERE uid = ?", uid)
+	err := row.Scan(&user.Stones, &user.Star4LimitCounter, &user.Star5LimitCounter, &isGuaranteed)
 	if err == sql.ErrNoRows {
 		// データが無い（新規ユーザー）の場合は、初期値をDBに登録
 		userDB.Exec("INSERT INTO users (uid) VALUES (?)", uid)
@@ -82,20 +83,31 @@ func getUserData(uid string) *UserData {
 	return user
 }
 
-// ガチャを引いた後、最新のカウンター状態をDBに上書き保存する
-func updateUserData(uid string, user *UserData) {
-	_, err := userDB.Exec("UPDATE users SET star4_limit_counter = ?, star5_limit_counter = ?, is_next_pickup_guaranteed = ? WHERE uid = ?",
-		user.Star4LimitCounter, user.Star5LimitCounter, user.IsNextPickupGuaranteed, uid)
+// ガチャの結果を保存する関数 （トランザクション版）
+func saveGachaResultTx(uid string, user *UserData, results []GachaResult, cost int) error {
+	// トランザクションの開始
+	tx, err := userDB.Begin()
 	if err != nil {
-		log.Println("データ保存エラー:", err)
+		return err
 	}
-}
 
-// 引いたキャラクターを履歴DBに追加する
-func addHistory(uid string, result GachaResult) {
-	_, err := userDB.Exec("INSERT INTO history (uid, rarity, character) VALUES (?, ?, ?)",
-		uid, result.Rarity, result.Character)
+	// 石を消費してカウンターを進める
+	_, err = tx.Exec("UPDATE users SET stones = stones - ?, star4_limit_counter = ?, star5_limit_counter = ?, is_next_pickup_guaranteed = ? WHERE uid = ?",
+		cost, user.Star4LimitCounter, user.Star5LimitCounter, user.IsNextPickupGuaranteed, uid)
 	if err != nil {
-		log.Println("履歴保存エラー:", err)
+		tx.Rollback() // エラーが起きたらロールバック
+		return err
 	}
+
+	// ガチャの結果を履歴テーブルに保存
+	for _, res := range results {
+		_, err = tx.Exec("INSERT INTO history (uid, rarity, character) VALUES (?, ?, ?)", uid, res.Rarity, res.Character)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	// コミットして確定
+	return tx.Commit()
 }
