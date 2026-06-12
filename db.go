@@ -47,6 +47,49 @@ func initDB() {
 	if err != nil {
 		log.Fatal("historyテーブル作成エラー:", err)
 	}
+
+	// キャラクターデータを保存するテーブルを作成
+	charactersTable := `
+	CREATE TABLE IF NOT EXISTS characters (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT,
+		rarity TEXT,
+		is_pickup BOOLEAN DEFAULT 0
+	);`
+	_, err = userDB.Exec(charactersTable)
+	if err != nil {
+		log.Fatal("charactersテーブル作成エラー:", err)
+	}
+
+	// もしキャラクターテーブルが空の場合初期化
+	var count int
+	userDB.QueryRow("SELECT COUNT(*) FROM characters").Scan(&count)
+	if count == 0 {
+		log.Println("キャラクターの初期データを挿入します...")
+		initialData := []struct {
+			name     string
+			rarity   string
+			isPickup bool
+		}{
+			{"ゼウス", "星5", true},
+			{"ウラノス", "星5", false},
+			{"クロノス", "星5", false},
+			{"釈迦", "星5", false},
+			{"シヴァ", "星5", false},
+			{"ポセイドン", "星5", false},
+			{"ヘラクレス", "星5", false},
+			{"キリスト", "星5", false},
+			{"ヨハネ", "星4", true},
+			{"千手観音", "星4", true},
+			{"アキレス", "星4", true},
+			{"武器", "星3", false},
+		}
+
+		for _, c := range initialData {
+			userDB.Exec("INSERT INTO characters (name, rarity, is_pickup) VALUES (?, ?, ?)",
+				c.name, c.rarity, c.isPickup)
+		}
+	}
 }
 
 // ユーザーIDからデータを取得する関数
@@ -129,4 +172,31 @@ func addStonesTx(uid string, stonesToAdd int) error {
 
 	// コミットして確定
 	return tx.Commit()
+}
+
+// DBから指定したレアリティとピックアップ条件に合うキャラクターの配列を取得する関数
+func getCharactersFromDB(rarity string, isPickup bool) []string {
+	var chars []string
+
+	// boolをSQLite用の整数(0か1)に変換
+	pickupInt := 0
+	if isPickup {
+		pickupInt = 1
+	}
+
+	// DBから検索
+	rows, err := userDB.Query("SELECT name FROM characters WHERE rarity = ? AND is_pickup = ?", rarity, pickupInt)
+	if err != nil {
+		log.Println("キャラクター取得エラー:", err)
+		return chars
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name string
+		rows.Scan(&name)
+		chars = append(chars, name)
+	}
+
+	return chars
 }

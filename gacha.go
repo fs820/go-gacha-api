@@ -31,18 +31,6 @@ const (
 	softPityIncrement = 6  // 確率が上がる割合 (6%ずつ増加)
 )
 
-// --- 排出キャラクターのリスト ---
-// ピックアップ星5
-var pickupStar5 = "ゼウス"
-
-// すり抜け星5（7名）
-var standardStar5 = []string{"ウラノス", "クロノス", "釈迦", "キリスト", "シヴァ", "ポセイドン", "ヘラクレス"}
-
-// ピックアップ星4（3名）
-var pickupStar4 = []string{"ヨハネ", "千手観音", "アキレス"}
-
-var star3 = "武器" // 星3
-
 // ユーザデータ
 type UserData struct {
 	Stones                 int
@@ -274,11 +262,14 @@ func gachaJudgment(user *UserData) GachaResult {
 		// 5.1%の確率で星4 （もしくは、天井カウンターが10連目の場合は強制的に星4）
 		user.Star4LimitCounter = 0 // カウンターをリセット
 
-		randomIndex := rand.IntN(len(pickupStar4)) // ピックアップ星4キャラクターの中からランダムに選ぶ
+		pickupStar4 := getCharactersFromDB("星4", true) // ピックアップ星4キャラクターのリストをDBから取得
+		randomIndex := rand.IntN(len(pickupStar4))     // ピックアップ星4キャラクターの中からランダムに選ぶ
 		return GachaResult{Rarity: "星4", Character: pickupStar4[randomIndex]}
 	} else {
 		// 94.3%の確率で星3
-		return GachaResult{Rarity: "星3", Character: star3}
+		star3 := getCharactersFromDB("星3", false) // 星3キャラクターのリストをDBから取得
+		randomIndex := rand.IntN(len(star3))      // 星3キャラクターの中からランダムに選ぶ
+		return GachaResult{Rarity: "星3", Character: star3[randomIndex]}
 	}
 }
 
@@ -287,14 +278,21 @@ func pickupJudgment(user *UserData) GachaResult {
 	// ピックアップキャラクターが確定している場合は、ピックアップキャラクターを返す
 	if user.IsNextPickupGuaranteed {
 		user.IsNextPickupGuaranteed = false // フラグをリセット
-		return GachaResult{Rarity: "星5", Character: pickupStar5}
+
+		pickupStar5 := getCharactersFromDB("星5", true)                        // ピックアップ星5キャラクターのリストをDBから取得
+		randomIndex := rand.IntN(len(pickupStar5))                            // ピックアップ星5キャラクターの中からランダムに選ぶ
+		return GachaResult{Rarity: "星5", Character: pickupStar5[randomIndex]} // ピックアップキャラクターの中から1体を返す（今回は1体しかいない想定）
 	} else {
 		// ピックアップキャラクターが確定していない場合は、50%の確率でピックアップキャラクター、50%の確率ですり抜けキャラクターを返す
 		if rand.IntN(2) == 0 {
-			return GachaResult{Rarity: "星5", Character: pickupStar5}
+			pickupStar5 := getCharactersFromDB("星5", true) // ピックアップ星5キャラクターのリストをDBから取得
+			randomIndex := rand.IntN(len(pickupStar5))     // ピックアップ星5キャラクターの中からランダムに選ぶ
+			return GachaResult{Rarity: "星5", Character: pickupStar5[randomIndex]}
 		} else {
-			user.IsNextPickupGuaranteed = true           // 次のガチャでピックアップキャラクターが確定するようにフラグをセット
-			randomIndex := rand.IntN(len(standardStar5)) // すり抜けキャラクターの中からランダムに選ぶ
+			user.IsNextPickupGuaranteed = true // 次のガチャでピックアップキャラクターが確定するようにフラグをセット
+
+			standardStar5 := getCharactersFromDB("星5", false) // すり抜け星5キャラクターのリストをDBから取得
+			randomIndex := rand.IntN(len(standardStar5))      // すり抜けキャラクターの中からランダムに選ぶ
 			return GachaResult{Rarity: "星5", Character: standardStar5[randomIndex]}
 		}
 	}
