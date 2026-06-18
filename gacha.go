@@ -91,6 +91,12 @@ func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
 
 // 石を追加するハンドラー（デバッグ用）
 func addStonesHandler(w http.ResponseWriter, r *http.Request) {
+	// GETリクエスト（単なるURLアクセス）は弾き、POSTリクエストのみ受け付ける
+	if r.Method != http.MethodPost {
+		http.Error(w, "不正なリクエストです", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
 	uid := getOrCreateSession(w, r)
 

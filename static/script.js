@@ -78,16 +78,23 @@ async function drawGacha10() {
 // 石を追加するボタンが押された時の処理（デバッグ用）
 async function addStones() {
     try {
-        // サーバーの /add_stones エンドポイントにリクエストを送る
-        const response = await fetch("/add_stones");
+        // サーバーの /add_stones エンドポイントにPOSTリクエストを送る
+        const response = await fetch("/add_stones", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        });
         if (!response.ok) {
             const errorText = await response.text();
-            alert(errorText);
+            alert("購入に失敗しました: " + errorText);
             return;
         }
         const data = await response.json();
+
         // 石の所持数を更新する
         document.getElementById("stone-count").innerText = data.stones;
+        alert("石を1000個購入しました！");
     } catch (error) {
         // エラーの具体的な中身（error.message）を画面に出す！
         console.error("石の追加に失敗:", error);

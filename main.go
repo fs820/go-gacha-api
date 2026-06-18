@@ -27,6 +27,9 @@ func main() {
 	// 天井カウンターを取得するエンドポイント
 	http.HandleFunc("/limit", limitHandler)
 
+	// 管理者用エンドポイント
+	http.HandleFunc("/admin/delete_history", adminDeleteHistoryHandler)
+
 	// サーバー起動のメッセージを表示
 	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080 にアクセスしてください。")
 	fmt.Println("終了するにはターミナルで Ctrl + C を押します。")
