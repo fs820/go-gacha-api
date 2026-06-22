@@ -29,6 +29,7 @@ func main() {
 
 	// 管理者用エンドポイント
 	http.HandleFunc("/admin/delete_history", adminDeleteHistoryHandler)
+	http.HandleFunc("/admin/add_stones", adminAddStonesHandler)
 
 	// サーバー起動のメッセージを表示
 	fmt.Println("サーバーを起動しました！ ブラウザで http://localhost:8080 にアクセスしてください。")
