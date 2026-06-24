@@ -7,11 +7,19 @@ import (
 	"strconv"
 )
 
+const PASSWORD = "Bearer supersecret"
+
 // 管理者専用：すべての履歴を削除するエンドポイント
 func adminDeleteHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	// パスワード認証（URLのクエリパラメータを確認）
-	password := r.URL.Query().Get("pass")
-	if password != "supersecret" { // 合言葉が違う場合は弾く
+	// POSTリクエストのみ
+	if r.Method != http.MethodPost {
+		http.Error(w, "許可されていないリクエスト方法です (Method Not Allowed)", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// パスワードチェック
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != PASSWORD {
 		http.Error(w, "権限がありません (Unauthorized)", http.StatusUnauthorized)
 		return
 	}
@@ -23,7 +31,7 @@ func adminDeleteHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// AUTOINCREMENTのid番号を1にリセットする
+	// AUTOINCREMENTのid番号をリセットする
 	userDB.Exec("DELETE FROM sqlite_sequence WHERE name='history'")
 
 	// 成功メッセージ
@@ -33,9 +41,15 @@ func adminDeleteHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 // 管理者専用：指定したユーザーに石を付与するエンドポイント
 func adminAddStonesHandler(w http.ResponseWriter, r *http.Request) {
-	// パスワード認証
-	password := r.URL.Query().Get("pass")
-	if password != "supersecret" {
+	// POSTリクエストのみ
+	if r.Method != http.MethodPost {
+		http.Error(w, "許可されていないリクエスト方法です (Method Not Allowed)", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// パスワードチェック
+	authHeader := r.Header.Get("Authorization")
+	if authHeader != PASSWORD {
 		http.Error(w, "権限がありません (Unauthorized)", http.StatusUnauthorized)
 		return
 	}
