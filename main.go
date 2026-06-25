@@ -27,6 +27,10 @@ func main() {
 	// 天井カウンターを取得するエンドポイント
 	http.HandleFunc("/limit", limitHandler)
 
+	// 認証用エンドポイント
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login", loginHandler)
+
 	// 管理者用エンドポイント
 	http.HandleFunc("/admin/delete_history", adminDeleteHistoryHandler)
 	http.HandleFunc("/admin/add_stones", adminAddStonesHandler)

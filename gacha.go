@@ -101,7 +101,7 @@ func addStonesHandler(w http.ResponseWriter, r *http.Request) {
 	uid := getOrCreateSession(w, r)
 
 	// 石を追加する関数を呼び出す（トランザクション版）
-	err := addStonesTx(uid, 1000)
+	err := addStones(uid, 1000)
 	if err != nil {
 		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
 		return

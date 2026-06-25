@@ -25,6 +25,8 @@ func initDB() {
 	usersTable := `
 	CREATE TABLE IF NOT EXISTS users (
 		uid TEXT PRIMARY KEY,
+		username TEXT UNIQUE,
+		password_hash,
 		stones INTEGER DEFAULT 30000,
 		star4_limit_counter INTEGER DEFAULT 0,
 		star5_limit_counter INTEGER DEFAULT 0,
@@ -126,7 +128,22 @@ func getUserData(uid string) *UserData {
 	return user
 }
 
-// ガチャの結果を保存する関数 （トランザクション版）
+// DBに新規ユーザーを登録する関数 ※パスワードはhash済文字列
+func insertUser(uid string, username string, hashedPassword string) error {
+	// データベースに新しいユーザーを保存
+	_, err := userDB.Exec("INSERT INTO users (uid, username, password_hash) VALUES (?, ?, ?)",
+		uid, username, hashedPassword)
+	return err
+}
+
+// ユーザー名からDBを検索して uidとhash済パスワードを返す関数
+func findUser(username string) (string, string, error) {
+	var uid, hash string
+	err := userDB.QueryRow("SELECT uid, password_hash FROM users WHERE username = ?", username).Scan(&uid, &hash)
+	return uid, hash, err
+}
+
+// ガチャの結果を保存する関数 （トランザクション）
 func saveGachaResultTx(uid string, user *UserData, results []GachaResult, cost int) error {
 	// トランザクションの開始
 	tx, err := userDB.Begin()
@@ -155,23 +172,11 @@ func saveGachaResultTx(uid string, user *UserData, results []GachaResult, cost i
 	return tx.Commit()
 }
 
-// ガチャ石を追加する関数 （トランザクション版）
-func addStonesTx(uid string, stonesToAdd int) error {
-	// トランザクションの開始
-	tx, err := userDB.Begin()
-	if err != nil {
-		return err
-	}
-
+// ガチャ石を追加する関数 （トランザクション）
+func addStones(uid string, stonesToAdd int) error {
 	// 石を追加する
-	_, err = tx.Exec("UPDATE users SET stones = stones + ? WHERE uid = ?", stonesToAdd, uid)
-	if err != nil {
-		tx.Rollback() // エラーが起きたらロールバック
-		return err
-	}
-
-	// コミットして確定
-	return tx.Commit()
+	_, err := userDB.Exec("UPDATE users SET stones = stones + ? WHERE uid = ?", stonesToAdd, uid)
+	return err
 }
 
 // DBから指定したレアリティとピックアップ条件に合うキャラクターの配列を取得する関数
