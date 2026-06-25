@@ -26,7 +26,7 @@ func initDB() {
 	CREATE TABLE IF NOT EXISTS users (
 		uid TEXT PRIMARY KEY,
 		username TEXT UNIQUE,
-		password_hash,
+		password_hash TEXT,
 		stones INTEGER DEFAULT 30000,
 		star4_limit_counter INTEGER DEFAULT 0,
 		star5_limit_counter INTEGER DEFAULT 0,
