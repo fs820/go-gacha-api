@@ -145,7 +145,7 @@ async function addStones() {
 
         // 石の所持数を更新する
         document.getElementById("stone-count").innerText = data.stones;
-        alert("石を1000個購入しました！");
+        alert("石を3000個購入しました！");
     } catch (error) {
         // エラーの具体的な中身（error.message）を画面に出す！
         console.error("石の追加に失敗:", error);

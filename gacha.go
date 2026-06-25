@@ -2,10 +2,8 @@ package main // エントリーポイント
 
 // ライブラリのインポート
 import (
-	crand "crypto/rand" // 乱数 暗号用 (安全)
-	"encoding/hex"      // セッションIDの生成に使用
-	"encoding/json"     // JSONのエンコード/デコードに使用
-	"math/rand/v2"      // 乱数 ガチャ用 (高速)
+	"encoding/json" // JSONのエンコード/デコードに使用
+	"math/rand/v2"  // 乱数 ガチャ用 (高速)
 	"net/http"
 )
 
@@ -54,26 +52,9 @@ type GachaResponse struct {
 	Stones    int           `json:"stones"`    // 所持石数
 }
 
-// セッションIDを生成する関数
-func generateSessionID() string {
-	b := make([]byte, 16)        // 16バイトのランダムなデータを格納するためのバイトスライスを作成
-	crand.Read(b)                // バイトスライスにランダムなデータを埋める
-	return hex.EncodeToString(b) // バイトスライスを16進数の文字列に変換して返す
-}
-
-// CookieからセッションIDを取得する関数
-func getSession(r *http.Request) (string, error) {
-	// リクエストから "session_id" という名前のCookieを探す
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		return "", err
-	}
-	return cookie.Value, nil
-}
-
-// 石を追加するハンドラー（デバッグ用）
+// 石を追加するハンドラー
 func addStonesHandler(w http.ResponseWriter, r *http.Request) {
-	// GETリクエスト（単なるURLアクセス）は弾き、POSTリクエストのみ受け付ける
+	// POSTリクエストのみ受け付ける
 	if r.Method != http.MethodPost {
 		http.Error(w, "不正なリクエストです", http.StatusMethodNotAllowed)
 		return
@@ -86,8 +67,8 @@ func addStonesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 石を追加する関数を呼び出す（トランザクション版）
-	err = addStones(uid, 1000)
+	// 石を追加する関数を呼び出す
+	err = addStones(uid, 3000)
 	if err != nil {
 		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
 		return

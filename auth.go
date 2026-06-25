@@ -2,6 +2,8 @@ package main
 
 // ライブラリのインポート
 import (
+	"crypto/rand" // 乱数 暗号用 (安全)
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 
@@ -12,6 +14,38 @@ import (
 type AuthRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+// セッションIDを生成する関数
+func generateSessionID() string {
+	b := make([]byte, 16)        // 16バイトのランダムなデータを格納するためのバイトスライスを作成
+	rand.Read(b)                 // バイトスライスにランダムなデータを埋める
+	return hex.EncodeToString(b) // バイトスライスを16進数の文字列に変換して返す
+}
+
+// CookieからセッションIDを取得する関数
+func getSession(r *http.Request) (string, error) {
+	// リクエストから "session_id" という名前のCookieを探す
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		return "", err
+	}
+	return cookie.Value, nil
+}
+
+// ログイン状態を確認するハンドラー
+func checkAuthHandler(w http.ResponseWriter, r *http.Request) {
+	// CookieからユーザーIDを取得
+	_, err := getSession(r)
+	if err != nil {
+		// Cookieが無い、または期限切れの場合はログインが必要
+		http.Error(w, "未ログイン", http.StatusUnauthorized)
+		return
+	}
+
+	// 取得できればOK (ログイン状態)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 // 新規登録ハンドラー
