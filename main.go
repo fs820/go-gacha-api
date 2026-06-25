@@ -30,6 +30,7 @@ func main() {
 	// 認証用エンドポイント
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/check_auth", checkAuthHandler)
 
 	// 管理者用エンドポイント
 	http.HandleFunc("/admin/delete_history", adminDeleteHistoryHandler)

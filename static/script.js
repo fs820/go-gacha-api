@@ -50,9 +50,26 @@ async function loginUser() {
     }
 }
 
-// ページが読み込まれたときに、天井カウンターと履歴をサーバーから取得してUIを更新する
-window.onload = function() {
-
+// ページが読み込まれたときに、ログイン状態を確認する
+window.onload = async function() {
+    try {
+        // サーバーに「現在のCookieは有効ですか？」と尋ねる
+        const response = await fetch("/check_auth");
+        
+        if (response.ok) {
+            // 有効だった場合：ログイン画面を隠して、ガチャ画面を表示！
+            document.getElementById("auth-area").style.display = "none";
+            document.getElementById("gacha-app").style.display = "block";
+            
+            // ユーザーデータを読み込む
+            loadHistoryFromServer();
+            loadLimitFromServer();
+        } else {
+            // 無効だった場合（未ログイン）：何もしない（ログイン画面が出たままになる）
+        }
+    } catch (error) {
+        console.error("認証チェックに失敗:", error);
+    }
 };
 
 // 単発ガチャボタンが押された時の処理
