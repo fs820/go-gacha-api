@@ -1,7 +1,58 @@
+// 新規登録処理
+async function registerUser() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+    const msgArea = document.getElementById("auth-message");
+
+    try {
+        const response = await fetch("/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        const text = await response.text();
+        msgArea.style.color = response.ok ? "blue" : "red";
+        msgArea.innerText = text;
+    } catch (error) {
+        msgArea.innerText = "通信エラーが発生しました";
+    }
+}
+
+// ログイン処理
+async function loginUser() {
+    const user = document.getElementById("username").value;
+    const pass = document.getElementById("password").value;
+    const msgArea = document.getElementById("auth-message");
+
+    try {
+        const response = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user, password: pass })
+        });
+        const text = await response.text();
+        
+        if (response.ok) {
+            // ログイン成功時：ログイン画面を隠して、ガチャ画面を表示する！
+            document.getElementById("auth-area").style.display = "none";
+            document.getElementById("gacha-app").style.display = "block";
+            
+            // ログインした人のデータを読み込む
+            loadHistoryFromServer();
+            loadLimitFromServer();
+        } else {
+            // エラー時
+            msgArea.style.color = "red";
+            msgArea.innerText = text;
+        }
+    } catch (error) {
+        msgArea.innerText = "通信エラーが発生しました";
+    }
+}
+
 // ページが読み込まれたときに、天井カウンターと履歴をサーバーから取得してUIを更新する
 window.onload = function() {
-    loadHistoryFromServer();
-    loadLimitFromServer();
+
 };
 
 // 単発ガチャボタンが押された時の処理

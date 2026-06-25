@@ -61,32 +61,14 @@ func generateSessionID() string {
 	return hex.EncodeToString(b) // バイトスライスを16進数の文字列に変換して返す
 }
 
-// CookieからセッションIDを取得、無ければ新規発行してCookieに保存する関数
-func getOrCreateSession(w http.ResponseWriter, r *http.Request) string {
+// CookieからセッションIDを取得する関数
+func getSession(r *http.Request) (string, error) {
 	// リクエストから "session_id" という名前のCookieを探す
 	cookie, err := r.Cookie("session_id")
-
-	// すでにCookieを持っている場合は、そのIDをそのまま返す
-	if err == nil {
-		return cookie.Value
+	if err != nil {
+		return "", err
 	}
-
-	// 新しいセッションIDを生成
-	newID := generateSessionID()
-
-	// ブラウザにCookieを保存させるための設定
-	newCookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    newID,
-		Path:     "/",                 // サイト内の全ページでこのCookieを有効にする
-		HttpOnly: true,                // JavaScriptからCookieを盗まれるのを防ぐセキュリティ設定
-		MaxAge:   oneDay * cookieDays, // 有効期限（秒数）
-	}
-
-	// レスポンスにCookieを入れる
-	http.SetCookie(w, newCookie)
-
-	return newID
+	return cookie.Value, nil
 }
 
 // 石を追加するハンドラー（デバッグ用）
@@ -97,11 +79,15 @@ func addStonesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
-	uid := getOrCreateSession(w, r)
+	// CookieからユーザーIDを取得
+	uid, err := getSession(r)
+	if err != nil {
+		http.Error(w, "ログインしてください", http.StatusUnauthorized)
+		return
+	}
 
 	// 石を追加する関数を呼び出す（トランザクション版）
-	err := addStones(uid, 1000)
+	err = addStones(uid, 1000)
 	if err != nil {
 		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
 		return
@@ -117,8 +103,13 @@ func addStonesHandler(w http.ResponseWriter, r *http.Request) {
 
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
-	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
-	uid := getOrCreateSession(w, r)
+	// CookieからユーザーIDを取得
+	uid, err := getSession(r)
+	if err != nil {
+		http.Error(w, "ログインしてください", http.StatusUnauthorized)
+		return
+	}
+
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
@@ -132,7 +123,7 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	result := gachaJudgment(user)
 
 	// DB保存
-	err := saveGachaResultTx(uid, user, []GachaResult{result}, gachaCost)
+	err = saveGachaResultTx(uid, user, []GachaResult{result}, gachaCost)
 	if err != nil {
 		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
 		return
@@ -154,8 +145,13 @@ func gachaHandler(w http.ResponseWriter, r *http.Request) {
 
 // 10連ガチャの処理を行う関数
 func gacha10Handler(w http.ResponseWriter, r *http.Request) {
-	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
-	uid := getOrCreateSession(w, r)
+	// CookieからユーザーIDを取得
+	uid, err := getSession(r)
+	if err != nil {
+		http.Error(w, "ログインしてください", http.StatusUnauthorized)
+		return
+	}
+
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
@@ -180,7 +176,7 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// DB保存
-	err := saveGachaResultTx(uid, user, results, gachaCost*10)
+	err = saveGachaResultTx(uid, user, results, gachaCost*10)
 	if err != nil {
 		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
 		return
@@ -195,8 +191,13 @@ func gacha10Handler(w http.ResponseWriter, r *http.Request) {
 
 // 天井カウンターを返すハンドラー
 func limitHandler(w http.ResponseWriter, r *http.Request) {
-	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
-	uid := getOrCreateSession(w, r)
+	// CookieからユーザーIDを取得
+	uid, err := getSession(r)
+	if err != nil {
+		http.Error(w, "ログインしてください", http.StatusUnauthorized)
+		return
+	}
+
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 
@@ -210,8 +211,13 @@ func limitHandler(w http.ResponseWriter, r *http.Request) {
 
 // 履歴を返すハンドラー
 func historyHandler(w http.ResponseWriter, r *http.Request) {
-	// CookieからユーザーIDを取得、無ければ新規発行してブラウザに植え付ける関数を呼び出す
-	uid := getOrCreateSession(w, r)
+	// CookieからユーザーIDを取得
+	uid, err := getSession(r)
+	if err != nil {
+		http.Error(w, "ログインしてください", http.StatusUnauthorized)
+		return
+	}
+
 	// ユーザーIDからユーザーデータを取得
 	user := getUserData(uid)
 

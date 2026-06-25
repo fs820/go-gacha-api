@@ -6,27 +6,36 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <h1>ガチャシミュレーター</h1>
-    
-    <div id="pity-info">
-        所持石: <span id="stone-count" style="color: blue; font-weight: bold;">---</span> 個 <br>
-        星5天井まであと: <span id="pity5-count">90</span>回 / 
-        星4確定まであと: <span id="pity4-count">10</span>回
+
+    <div id="auth-area" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3>ログイン / 新規登録</h3>
+        <input type="text" id="username" placeholder="ユーザー名" style="font-size: 18px; padding: 5px;">
+        <input type="password" id="password" placeholder="パスワード" style="font-size: 18px; padding: 5px;">
+        <br><br>
+        <button onclick="registerUser()" style="background-color: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">新規登録</button>
+        <button onclick="loginUser()" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">ログイン</button>
+        <div id="auth-message" style="color: red; margin-top: 10px; font-weight: bold;"></div>
     </div>
 
-    <button id="gacha-btn" onclick="drawGacha()">単発</button>
-    <button id="gacha-btn" onclick="drawGacha10()" style="background-color: #e91e63;">10連</button>
+    <div id="gacha-app" style="display: none;">
+        <div id="pity-info">
+            所持石: <span id="stone-count" style="color: blue; font-weight: bold;">---</span> 個 <br>
+            星5天井まであと: <span id="pity5-count">90</span>回 / 
+            星4確定まであと: <span id="pity4-count">10</span>回
+        </div>
 
-    <button id="gacha-btn" onclick="addStones()" style="background-color: #4CAF50;">石を購入 (1000円)</button>
+        <button id="gacha-btn" onclick="drawGacha()">単発</button>
+        <button id="gacha-btn" onclick="drawGacha10()" style="background-color: #e91e63;">10連</button>
+        <button id="gacha-btn" onclick="addStones()" style="background-color: #4CAF50;">石を購入 (1000円)</button>
 
-    <div id="result-area">結果はここに表示されます</div>
+        <div id="result-area">結果はここに表示されます</div>
 
-    <hr>
-    <h3>ガチャ履歴（直近50件）</h3>
-    <div id="history-area"></div>
+        <hr>
+        <h3>ガチャ履歴（直近50件）</h3>
+        <div id="history-area"></div>
+    </div>
 
     <script src="script.js"></script>
-    
 </body>
 </html>
