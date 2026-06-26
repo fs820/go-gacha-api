@@ -88,6 +88,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ユーザー登録が完了しました！ログインしてください。"))
 }
 
+// ログインハンドラー
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// POSTリクエストのみ
 	if r.Method != http.MethodPost {
