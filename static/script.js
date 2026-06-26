@@ -1,3 +1,25 @@
+// ページが読み込まれたときに、ログイン状態を確認する
+window.onload = async function() {
+    try {
+        // サーバーに「現在のCookieは有効ですか？」と尋ねる
+        const response = await fetch("/check_auth");
+        
+        if (response.ok) {
+            // 有効だった場合：ログイン画面を隠して、ガチャ画面を表示！
+            document.getElementById("auth-area").style.display = "none";
+            document.getElementById("gacha-app").style.display = "block";
+            
+            // ユーザーデータを読み込む
+            loadHistoryFromServer();
+            loadLimitFromServer();
+        } else {
+            // 無効だった場合（未ログイン）：何もしない（ログイン画面が出たままになる）
+        }
+    } catch (error) {
+        console.error("認証チェックに失敗:", error);
+    }
+};
+
 // 新規登録処理
 async function registerUser() {
     const user = document.getElementById("username").value;
@@ -49,28 +71,6 @@ async function loginUser() {
         msgArea.innerText = "通信エラーが発生しました";
     }
 }
-
-// ページが読み込まれたときに、ログイン状態を確認する
-window.onload = async function() {
-    try {
-        // サーバーに「現在のCookieは有効ですか？」と尋ねる
-        const response = await fetch("/check_auth");
-        
-        if (response.ok) {
-            // 有効だった場合：ログイン画面を隠して、ガチャ画面を表示！
-            document.getElementById("auth-area").style.display = "none";
-            document.getElementById("gacha-app").style.display = "block";
-            
-            // ユーザーデータを読み込む
-            loadHistoryFromServer();
-            loadLimitFromServer();
-        } else {
-            // 無効だった場合（未ログイン）：何もしない（ログイン画面が出たままになる）
-        }
-    } catch (error) {
-        console.error("認証チェックに失敗:", error);
-    }
-};
 
 // 単発ガチャボタンが押された時の処理
 async function drawGacha() {
@@ -146,26 +146,33 @@ async function drawGacha10() {
 // 石を追加するボタンが押された時の処理（デバッグ用）
 async function addStones() {
     try {
-        // サーバーの /add_stones エンドポイントにPOSTリクエストを送る
-        const response = await fetch("/add_stones", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            }
-        });
+        // サーバーに「注文」を作成してもらう（ユーザーとしての操作）
+        const response = await fetch("/checkout", { method: "POST" });
         if (!response.ok) {
-            const errorText = await response.text();
-            alert("購入に失敗しました: " + errorText);
+            alert("ログインしてください");
             return;
         }
         const data = await response.json();
+        const orderId = data.order_id;
 
-        // 石の所持数を更新する
-        document.getElementById("stone-count").innerText = data.stones;
-        alert("石を3000個購入しました！");
+        // ユーザーへの案内
+        alert(`注文を作成しました！(注文番号: ${orderId})\n\n※セキュリティ上の理由により、ボタンを押しただけでは石は増えません。決済会社からのWebhook（裏通信）が必要です。`);
+
+        // 開発者（あなた）が決済会社になりきるためのコマンドを出力
+        console.log("%c【決済システム（Stripe等）シミュレーター】", "color: blue; font-size: 16px; font-weight: bold;");
+        console.log("以下のコードをコピーして、このコンソールに貼り付けて実行（Enter）し、決済を完了させてください：\n\n");
+        
+        console.log(`fetch("/webhook/payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Stripe-Signature": "secret_stripe_key_123" },
+    body: JSON.stringify({ order_id: "${orderId}" })
+}).then(r => r.text()).then(text => {
+    console.log("Webhookからの返事:", text);
+    alert(text + "\\nガチャ画面をリロードして石を確認してください！");
+});`);
+
     } catch (error) {
-        // エラーの具体的な中身（error.message）を画面に出す！
-        console.error("石の追加に失敗:", error);
+        console.error("注文エラー:", error);
     }
 }
 

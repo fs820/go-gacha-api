@@ -19,9 +19,6 @@ func main() {
 	http.HandleFunc("/gacha", gachaHandler)     // 単発ガチャのエンドポイント /gacha
 	http.HandleFunc("/gacha10", gacha10Handler) // 10連ガチャのエンドポイント /gacha10
 
-	// 石を追加するエンドポイント（デバッグ用）
-	http.HandleFunc("/add_stones", addStonesHandler)
-
 	// 履歴だけを取得するエンドポイント
 	http.HandleFunc("/history", historyHandler)
 	// 天井カウンターを取得するエンドポイント
@@ -31,6 +28,10 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/check_auth", checkAuthHandler)
+
+	// 決済用エンドポイント
+	http.HandleFunc("/checkout", checkoutHandler)
+	http.HandleFunc("/webhook/payment", webhookHandler)
 
 	// 管理者用エンドポイント
 	http.HandleFunc("/admin/delete_history", adminDeleteHistoryHandler)

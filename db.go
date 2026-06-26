@@ -3,7 +3,8 @@ package main // エントリーポイント
 // ライブラリのインポート
 import (
 	"database/sql" // データベース操作に使用
-	"log"          // ロギングに使用
+	"fmt"
+	"log" // ロギングに使用
 
 	_ "modernc.org/sqlite" // SQLiteドライバ (データベース接続)
 )
@@ -92,6 +93,19 @@ func initDB() {
 				c.name, c.rarity, c.isPickup)
 		}
 	}
+
+	// 決済の注文状態を管理するテーブルを作成
+	ordersTable := `
+	CREATE TABLE IF NOT EXISTS orders (
+		order_id TEXT PRIMARY KEY,
+		uid TEXT,
+		amount INTEGER,
+		status TEXT   /* 'pending'(未払い) または 'paid'(支払い済み) */
+	);`
+	_, err = userDB.Exec(ordersTable)
+	if err != nil {
+		log.Fatal("ordersテーブル作成エラー:", err)
+	}
 }
 
 // ユーザーIDからデータを取得する関数
@@ -172,7 +186,7 @@ func saveGachaResultTx(uid string, user *UserData, results []GachaResult, cost i
 	return tx.Commit()
 }
 
-// ガチャ石を追加する関数 （トランザクション）
+// ガチャ石を追加する関数
 func addStones(uid string, stonesToAdd int) error {
 	// 石を追加する
 	_, err := userDB.Exec("UPDATE users SET stones = stones + ? WHERE uid = ?", stonesToAdd, uid)
@@ -204,4 +218,46 @@ func getCharactersFromDB(rarity string, isPickup bool) []string {
 	}
 
 	return chars
+}
+
+// 決済会社が決済出来た時に呼ばれる、石を増やしえ決済を完了する関数 (トランザクション)
+func completeOrderTx(orderID string) error {
+	// トランザクション開始 (注文の完了、石の付与)
+	tx, err := userDB.Begin()
+	if err != nil {
+		return err
+	}
+
+	// 注文を完了状態にに更新する (すでに 完了している('paid')の場合は何もしない(二重決済禁止))
+	res, err := tx.Exec("UPDATE orders SET status = 'paid' WHERE order_id = ? AND status = 'pending'", orderID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 実際に更新された行数をチェック
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		tx.Rollback()
+		return fmt.Errorf("無効な注文番号、または既に支払い済みの注文です")
+	}
+
+	// 購入したユーザーのIDと、付与する石の量を取得
+	var uid string
+	var amount int
+	err = tx.QueryRow("SELECT uid, amount FROM orders WHERE order_id = ?", orderID).Scan(&uid, &amount)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// 石を付与
+	_, err = tx.Exec("UPDATE users SET stones = stones + ? WHERE uid = ?", amount, uid)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// トランザクション終了
+	return tx.Commit()
 }

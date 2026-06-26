@@ -52,36 +52,6 @@ type GachaResponse struct {
 	Stones    int           `json:"stones"`    // 所持石数
 }
 
-// 石を追加するハンドラー
-func addStonesHandler(w http.ResponseWriter, r *http.Request) {
-	// POSTリクエストのみ受け付ける
-	if r.Method != http.MethodPost {
-		http.Error(w, "不正なリクエストです", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// CookieからユーザーIDを取得
-	uid, err := getSession(r)
-	if err != nil {
-		http.Error(w, "ログインしてください", http.StatusUnauthorized)
-		return
-	}
-
-	// 石を追加する関数を呼び出す
-	err = addStones(uid, 3000)
-	if err != nil {
-		http.Error(w, "サーバーエラーが発生しました", http.StatusInternalServerError)
-		return
-	}
-
-	// ユーザーデータを取得して、レスポンスを返す
-	user := getUserData(uid)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(map[string]int{
-		"stones": user.Stones,
-	})
-}
-
 // ガチャの処理を行う関数
 func gachaHandler(w http.ResponseWriter, r *http.Request) {
 	// CookieからユーザーIDを取得
